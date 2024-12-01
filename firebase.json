@@ -1,0 +1,22 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "plant-iot-63116",
+          "appId": "1:426089945899:android:9023cddea1947b3230c36e",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "plant-iot-63116",
+          "configurations": {
+            "android": "1:426089945899:android:9023cddea1947b3230c36e",
+            "ios": "1:426089945899:ios:420e1ea587d5f97c30c36e"
+          }
+        }
+      }
+    }
+  }
+}

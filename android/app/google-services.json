@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "426089945899",
+    "project_id": "plant-iot-63116",
+    "storage_bucket": "plant-iot-63116.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426089945899:android:a587c813a1cb4c0030c36e",
+        "android_client_info": {
+          "package_name": "com.example.iot_v3"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN5dkHVWUbhaXNhhig9XXNkHFIt3wAxVA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:426089945899:android:9023cddea1947b3230c36e",
+        "android_client_info": {
+          "package_name": "com.iot.iot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN5dkHVWUbhaXNhhig9XXNkHFIt3wAxVA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
