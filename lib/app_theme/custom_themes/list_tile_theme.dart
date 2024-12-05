@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class MyListTileTheme {
   static ListTileThemeData lightListTileTheme = const ListTileThemeData(
-    tileColor: Color(0xFFE0E0E0),
+    tileColor: Color(0xFFF5F5F5),
     textColor: Colors.black,
     iconColor: Colors.black,
     shape: RoundedRectangleBorder(

@@ -33,7 +33,6 @@ class _HomePageState extends State<HomePage> {
       final user = userProvider.user;
       user?.reload();
       if (user?.emailVerified == false) {
-        print('Email not verified');
         showDialog(
           context: context,
           builder: (context) {
@@ -101,26 +100,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<bool> checkDeviceExists(String deviceId) async {
-    print("Checking if device or subcollection exists for: $deviceId");
-
     try {
       final parentDoc = await FirebaseFirestore.instance.doc('beaglebones/$deviceId').get();
       if (parentDoc.exists) {
-        print("Parent document exists: ${parentDoc.data()}");
         return true;
       }
       final subcollectionSnapshot = await FirebaseFirestore.instance.collection('beaglebones/$deviceId/data').limit(1).get();
       final subcollectionExists = subcollectionSnapshot.docs.isNotEmpty;
-      print("Subcollection exists: $subcollectionExists");
       return subcollectionExists;
     } catch (e) {
-      print("Error checking device existence: $e");
       return false;
     }
   }
 
   Future<void> updateUserData(String deviceId) async {
-    print("Updating user data with device: $deviceId");
     await FirebaseFirestore.instance.collection('users').doc(widget.userUID).update({
       'devices': FieldValue.arrayUnion([deviceId]),
     });
@@ -146,6 +139,10 @@ class _HomePageState extends State<HomePage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: AppBar(
         title: const Text('Home Page'),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        centerTitle: true,
       ),
       drawer: Drawer(
         child: Column(
@@ -202,7 +199,7 @@ class _HomePageState extends State<HomePage> {
                       title: const Text('Help & Support'),
                       leading: const Icon(Icons.help),
                       onTap: () {
-                        // Navigate to help page
+                        Navigator.pushNamed(context, helpPage);
                       },
                     ),
                     const SizedBox(height: 8.0),
@@ -210,7 +207,7 @@ class _HomePageState extends State<HomePage> {
                       title: const Text('About'),
                       leading: const Icon(Icons.info),
                       onTap: () {
-                        // Navigate to about page
+                        Navigator.pushNamed(context, aboutPage);
                       },
                     ),
                     const SizedBox(height: 8.0),

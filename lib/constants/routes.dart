@@ -9,3 +9,6 @@ const deviceQRScanner = '/qr/';
 const forgotPasswordPage = '/forgot-password/';
 const profilePage = '/profile/';
 const settingsPage = '/settings/';
+const helpPage = '/help/';
+const customerSupportPage = '/support/';
+const aboutPage = '/about/';

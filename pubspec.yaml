@@ -48,6 +48,7 @@ dependencies:
   shared_preferences: ^2.3.3
   flutter_background_service: ^5.0.10
   rive: ^0.13.19
+  flutter_email_sender: ^6.0.3
 
 
 
@@ -82,11 +83,12 @@ flutter:
   assets:
     - lib/models/new_plants_disease_model_float32.tflite
     - lib/models/
-    - lib/models/labels.txt
     - assets/
     - assets/images/
     - assets/animations/
     - assets/animations/plants.riv
+    - assets/animations/mail.riv
+    - assets/animations/plant_logo_loading_in_lightmode.riv
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

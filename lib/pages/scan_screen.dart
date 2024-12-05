@@ -61,10 +61,10 @@ class _ScanScreenState extends State<ScanScreen> {
     'Tomato___Tomato_mosaic_virus',
     'Tomato___healthy'
   ];
+
   @override
   void initState() {
     super.initState();
-
     loadModel(); // Load the TFLite model
   }
 
@@ -93,8 +93,7 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   // This method runs in an isolate to prevent UI freezing
-  static Future<String> runInferenceInIsolate(
-      String imagePath, List<String> labels, Interpreter interpreter) async {
+  static Future<String> runInferenceInIsolate(String imagePath, List<String> labels, Interpreter interpreter) async {
     final result = await compute(_processImageAndRunModel, {
       'imagePath': imagePath,
       'labels': labels,
@@ -105,11 +104,50 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   // Helper function to process the image and run the model
-  static Future<String> _processImageAndRunModel(
-      Map<String, dynamic> args) async {
+  static Future<String> _processImageAndRunModel(Map<String, dynamic> args) async {
     final String imagePath = args['imagePath'];
     final List<String> labels = args['labels'];
     final Interpreter interpreter = args['interpreter'];
+    final Map<String, String> readableLabels = {
+      'Apple___Apple_scab': 'Apple - Apple Scab',
+      'Apple___Black_rot': 'Apple - Black Rot',
+      'Apple___Cedar_apple_rust': 'Apple - Cedar Apple Rust',
+      'Apple___healthy': 'Apple - Healthy',
+      'Blueberry___healthy': 'Blueberry - Healthy',
+      'Cherry_(including_sour)___Powdery_mildew': 'Cherry (Including Sour) - Powdery Mildew',
+      'Cherry_(including_sour)___healthy': 'Cherry (Including Sour) - Healthy',
+      'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot': 'Corn (Maize) - Cercospora Leaf Spot (Gray Leaf Spot)',
+      'Corn_(maize)___Common_rust_': 'Corn (Maize) - Common Rust',
+      'Corn_(maize)___Northern_Leaf_Blight': 'Corn (Maize) - Northern Leaf Blight',
+      'Corn_(maize)___healthy': 'Corn (Maize) - Healthy',
+      'Grape___Black_rot': 'Grape - Black Rot',
+      'Grape___Esca_(Black_Measles)': 'Grape - Esca (Black Measles)',
+      'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)': 'Grape - Leaf Blight (Isariopsis Leaf Spot)',
+      'Grape___healthy': 'Grape - Healthy',
+      'Orange___Haunglongbing_(Citrus_greening)': 'Orange - Huanglongbing (Citrus Greening)',
+      'Peach___Bacterial_spot': 'Peach - Bacterial Spot',
+      'Peach___healthy': 'Peach - Healthy',
+      'Pepper,_bell___Bacterial_spot': 'Bell Pepper - Bacterial Spot',
+      'Pepper,_bell___healthy': 'Bell Pepper - Healthy',
+      'Potato___Early_blight': 'Potato - Early Blight',
+      'Potato___Late_blight': 'Potato - Late Blight',
+      'Potato___healthy': 'Potato - Healthy',
+      'Raspberry___healthy': 'Raspberry - Healthy',
+      'Soybean___healthy': 'Soybean - Healthy',
+      'Squash___Powdery_mildew': 'Squash - Powdery Mildew',
+      'Strawberry___Leaf_scorch': 'Strawberry - Leaf Scorch',
+      'Strawberry___healthy': 'Strawberry - Healthy',
+      'Tomato___Bacterial_spot': 'Tomato - Bacterial Spot',
+      'Tomato___Early_blight': 'Tomato - Early Blight',
+      'Tomato___Late_blight': 'Tomato - Late Blight',
+      'Tomato___Leaf_Mold': 'Tomato - Leaf Mold',
+      'Tomato___Septoria_leaf_spot': 'Tomato - Septoria Leaf Spot',
+      'Tomato___Spider_mites Two-spotted_spider_mite': 'Tomato - Spider Mites (Two-Spotted Spider Mite)',
+      'Tomato___Target_Spot': 'Tomato - Target Spot',
+      'Tomato___Tomato_Yellow_Leaf_Curl_Virus': 'Tomato - Yellow Leaf Curl Virus',
+      'Tomato___Tomato_mosaic_virus': 'Tomato - Mosaic Virus',
+      'Tomato___healthy': 'Tomato - Healthy',
+    };
 
     // Preprocess image
     final inputImage = await preprocessImage(imagePath, interpreter);
@@ -122,25 +160,24 @@ class _ScanScreenState extends State<ScanScreen> {
     interpreter.run(inputImage as Object, outputBuffer);
 
     // Find the index of the highest confidence score
-    final predictedIndex = (outputBuffer[0] as List<double>).indexWhere(
-        (value) =>
-            value ==
-            (outputBuffer[0] as List<double>).reduce((a, b) => a > b ? a : b));
+    final predictedIndex = (outputBuffer[0] as List<double>)
+        .indexWhere((value) => value == (outputBuffer[0] as List<double>).reduce((a, b) => a > b ? a : b));
     final predictedLabel = labels[predictedIndex];
 
-    return "Prediction: $predictedLabel (${(outputBuffer[0][predictedIndex] * 10).abs().toStringAsFixed(2)}%)";
+    // Use the readable labels map
+    final readableLabel = readableLabels[predictedLabel] ?? predictedLabel;
+
+    return "Prediction: $readableLabel (${(outputBuffer[0][predictedIndex] * 10).abs().toStringAsFixed(2)}%)";
   }
 
   // Preprocess the image to match model input
-  static Future<List<List<List<List<double>>>>?> preprocessImage(
-      String imagePath, Interpreter interpreter) async {
+  static Future<List<List<List<List<double>>>>?> preprocessImage(String imagePath, Interpreter interpreter) async {
     final image = img.decodeImage(File(imagePath).readAsBytesSync());
     if (image == null) return null;
 
     final inputShape = interpreter.getInputTensor(0).shape;
     final inputSize = inputShape[1]; // Assuming square input
-    final resizedImage =
-        img.copyResize(image, width: inputSize, height: inputSize);
+    final resizedImage = img.copyResize(image, width: inputSize, height: inputSize);
 
     // Normalize image data
     final inputBuffer = List.generate(
@@ -196,8 +233,7 @@ class _ScanScreenState extends State<ScanScreen> {
                         });
 
                         // Run inference in isolate
-                        String result = await runInferenceInIsolate(
-                            widget.imagePath, _labels, _interpreter);
+                        String result = await runInferenceInIsolate(widget.imagePath, _labels, _interpreter);
 
                         setState(() {
                           _predictionResult = result;
@@ -206,14 +242,13 @@ class _ScanScreenState extends State<ScanScreen> {
                       },
                       child: const Text(
                         'Scan',
-                        style: TextStyle(fontSize: 20, color: Colors.black),
                       ),
                     ),
               const SizedBox(height: 20),
               Text(
                 _predictionResult,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 18, color: Colors.black),
+                style: Theme.of(context).textTheme.bodyLarge,
               ),
             ],
           ),

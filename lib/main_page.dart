@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:iot_v3/pages/drawer_pages/settings_provider.dart';
 import 'package:iot_v3/pages/home_page.dart';
 import 'package:iot_v3/pages/auth_pages/login_page.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +16,10 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  void loadSettings() {
+    Provider.of<SettingsProvider>(context, listen: false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,7 +42,8 @@ class _MainPageState extends State<MainPage> {
           if (snapshot.data == null) {
             return const LoginPage();
           } else {
-            snapshot.data!.reload(); // Reload user data from Firebase
+            snapshot.data!.reload();
+            loadSettings();
             return HomePage(userUID: snapshot.data!.uid, cameras: widget.cameras);
           }
         },

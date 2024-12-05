@@ -8,6 +8,9 @@ import 'package:iot_v3/pages/camera_screen.dart';
 import 'package:iot_v3/pages/device_data.dart';
 import 'package:iot_v3/pages/device_qr_scanner.dart';
 import 'package:iot_v3/pages/auth_pages/forgot_pass_page.dart';
+import 'package:iot_v3/pages/drawer_pages/about_page.dart';
+import 'package:iot_v3/pages/drawer_pages/customer_support_mail.dart';
+import 'package:iot_v3/pages/drawer_pages/help_page.dart';
 import 'package:iot_v3/pages/drawer_pages/profile_page.dart';
 import 'package:iot_v3/pages/drawer_pages/setting_page.dart';
 import 'package:iot_v3/pages/drawer_pages/settings_provider.dart';
@@ -27,9 +30,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
         ChangeNotifierProvider(create: (context) => UserProvider()), // Add UserProvider
-        ChangeNotifierProvider(
-          create: (context) => SettingsProvider(),
-        )
+        ChangeNotifierProvider(create: (context) => SettingsProvider())
       ],
       child: MyApp(cameras: cameras),
     ),
@@ -71,6 +72,9 @@ class MyApp extends StatelessWidget {
         forgotPasswordPage: (context) => const ForgotPassPage(),
         profilePage: (context) => const ProfilePage(),
         settingsPage: (context) => const SettingPage(),
+        helpPage: (context) => const HelpPage(),
+        customerSupportPage: (context) => const CustomerSupportMail(),
+        aboutPage: (context) => const AboutPage(),
       },
     );
   }

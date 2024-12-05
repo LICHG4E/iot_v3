@@ -4,6 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
+
+import 'drawer_pages/settings_provider.dart';
 
 class DeviceDataPage extends StatefulWidget {
   final String? deviceId;
@@ -16,17 +19,19 @@ class DeviceDataPage extends StatefulWidget {
 
 class _DeviceDataPageState extends State<DeviceDataPage> {
   late List<Map<String, dynamic>> deviceData;
-  late Map<String, dynamic> latestData;
+  late Map<String, dynamic>? latestData;
   bool isLoading = true;
   String currentChart = 'humidity_percent';
   String currentChartTitle = 'Humidity';
   Timer? _timer;
+  int chartPoints = 6;
 
   @override
   void initState() {
     super.initState();
     fetchDeviceData();
-    _timer = Timer.periodic(const Duration(minutes: 1, seconds: 1), (timer) {
+    _timer = Timer.periodic(
+        Duration(minutes: Provider.of<SettingsProvider>(context, listen: false).getChartUpdateInterval, seconds: 1), (timer) {
       print('Fetching data...');
       fetchDeviceData();
     });
@@ -34,18 +39,19 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
 
   @override
   void dispose() {
-    // Cancel the timer when the widget is disposed
     _timer?.cancel();
     super.dispose();
   }
 
   Future<void> fetchDeviceData() async {
+    chartPoints = Provider.of<SettingsProvider>(context, listen: false).getChartPoints;
+    print("Chart Points: $chartPoints");
     final querySnapshot = await FirebaseFirestore.instance
         .collection('beaglebones')
         .doc(widget.deviceId)
         .collection('data')
         .orderBy('timestamp', descending: true)
-        .limit(6)
+        .limit(chartPoints)
         .get();
     setState(() {
       print("Data fetched successfully");
@@ -53,6 +59,152 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
       latestData = deviceData.first;
       isLoading = false;
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Device : ${widget.deviceId}')),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: latestData?['fire_status'] == "Fire Detected!" || latestData?['fire_status'] == null
+                              ? Colors.red
+                              : Theme.of(context).cardColor,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            )
+                          ],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.fire_extinguisher, size: 32),
+                            const SizedBox(width: 8),
+                            Text('Fire Status : ${latestData?['fire_status']}', style: Theme.of(context).textTheme.titleLarge),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            )
+                          ],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(getTimeIcon(latestData?['light_description']), size: 32),
+                            const SizedBox(width: 8),
+                            Text('Light : ${latestData?['light_description']}', style: Theme.of(context).textTheme.titleLarge),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: GridView.count(
+                        physics: const NeverScrollableScrollPhysics(),
+                        shrinkWrap: true,
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 8.0,
+                        mainAxisSpacing: 8.0,
+                        children: [
+                          GestureDetector(
+                            onTap: () => changeChart('humidity_percent'),
+                            child: DataCard(
+                              title: 'Humidity',
+                              value: '${formatValue(latestData?['humidity_percent'])}%',
+                              icon: Icons.water_drop,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => changeChart('pressure_hpa'),
+                            child: DataCard(
+                              title: 'Pressure',
+                              value: '${formatValue(latestData?['pressure_hpa'])} hPa',
+                              icon: Icons.compress,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => changeChart('temperature_celsius'),
+                            child: DataCard(
+                              title: 'Temperature',
+                              value: '${formatValue(latestData?['temperature_celsius'])}°C',
+                              icon: Icons.thermostat,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => changeChart('light_intensity_percent'),
+                            child: DataCard(
+                              title: 'Light Intensity',
+                              value: '${formatLightValue(latestData?['light_intensity_percent'])}%',
+                              icon: Icons.lightbulb,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.data_usage, size: 28),
+                        const SizedBox(width: 8),
+                        Text(
+                          currentChartTitle,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      height: 300,
+                      padding: const EdgeInsets.only(left: 16, right: 40, top: 20, bottom: 20),
+                      child: LineChart(
+                        getLineChart(currentChart),
+                        duration: const Duration(milliseconds: 300),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+    );
   }
 
   List<FlSpot> getLineChartData(String dataKey) {
@@ -108,11 +260,9 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
   }
 
   LineChartData getLineChart(String dataKey) {
-    // Determine the minimum and maximum Y values dynamically
     double minValue = deviceData.map((data) => data[dataKey]?.toDouble() ?? 0.0).reduce((a, b) => a < b ? a : b);
     double maxValue = deviceData.map((data) => data[dataKey]?.toDouble() ?? 0.0).reduce((a, b) => a > b ? a : b);
 
-    // Add padding to avoid data points touching the edges
     double padding = (maxValue - minValue) * 0.1;
     double adjustedMinY = minValue - padding;
     double adjustedMaxY = maxValue + padding;
@@ -133,22 +283,21 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
             minIncluded: false,
             maxIncluded: false,
             getTitlesWidget: (value, meta) {
-              // Convert timestamp to DateTime
               DateTime date = DateTime.fromMillisecondsSinceEpoch(value.toInt() * 1000);
 
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 5,
                 child: RichText(
-                  textAlign: TextAlign.center, // Align text to center
+                  textAlign: TextAlign.center,
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: '${date.hour}:${date.minute.toString().padLeft(2, '0')}\n', // Time with zero-padded minutes
+                        text: '${date.hour}:${date.minute.toString().padLeft(2, '0')}\n',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       TextSpan(
-                        text: '${date.month}/${date.day}', // Month/Day
+                        text: '${date.month}/${date.day}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
                       ),
                     ],
@@ -196,9 +345,11 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
       maxY: adjustedMaxY,
       lineBarsData: [
         LineChartBarData(
+          preventCurveOverShooting: true,
           spots: getLineChartData(dataKey),
           isCurved: true,
-          curveSmoothness: 0.35,
+          curveSmoothness: 1,
+          isStrokeJoinRound: true,
           gradient: const LinearGradient(
             colors: [Colors.green, Colors.greenAccent],
           ),
@@ -215,156 +366,6 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
           ),
         ),
       ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Device : ${widget.deviceId}')),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: latestData['fire_status'] == "Fire Detected!" || latestData['fire_status'] == null
-                              ? Colors.red
-                              : Theme.of(context).cardColor,
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            )
-                          ],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.fire_extinguisher, size: 32),
-                            const SizedBox(width: 8),
-                            Text('Fire Status : ${latestData['fire_status']}', style: Theme.of(context).textTheme.titleLarge),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black12,
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            )
-                          ],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(getTimeIcon(latestData['light_description']), size: 32),
-                            const SizedBox(width: 8),
-                            Text('Light : ${latestData['light_description']}', style: Theme.of(context).textTheme.titleLarge),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 20,
-                    ),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: GridView.count(
-                        physics: const NeverScrollableScrollPhysics(),
-                        shrinkWrap: true,
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 8.0,
-                        mainAxisSpacing: 8.0,
-                        children: [
-                          GestureDetector(
-                            onTap: () => changeChart('humidity_percent'),
-                            child: DataCard(
-                              title: 'Humidity',
-                              value: '${formatValue(latestData['humidity_percent'])}%',
-                              icon: Icons.water_drop,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => changeChart('pressure_hpa'),
-                            child: DataCard(
-                              title: 'Pressure',
-                              value: '${formatValue(latestData['pressure_hpa'])} hPa',
-                              icon: Icons.compress,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => changeChart('temperature_celsius'),
-                            child: DataCard(
-                              title: 'Temperature',
-                              value: '${formatValue(latestData['temperature_celsius'])}°C',
-                              icon: Icons.thermostat,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => changeChart('light_intensity_percent'),
-                            child: DataCard(
-                              title: 'Light Intensity',
-                              value: '${formatLightValue(latestData['light_intensity_percent'])}%',
-                              icon: Icons.lightbulb,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.data_usage, size: 28),
-                        const SizedBox(width: 8),
-                        Text(
-                          currentChartTitle,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Line chart
-                    Container(
-                      height: 300,
-                      padding: const EdgeInsets.only(left: 16, right: 40, top: 20, bottom: 20),
-                      child: LineChart(
-                        getLineChart(currentChart),
-                        duration: const Duration(milliseconds: 300),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
     );
   }
 }

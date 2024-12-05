@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:iot_v3/app_theme/custom_themes/elevated_button_theme.dart';
 import 'package:iot_v3/app_theme/custom_themes/list_tile_theme.dart';
+import 'package:iot_v3/app_theme/custom_themes/snackbar_theme.dart';
 import 'package:iot_v3/app_theme/custom_themes/text_theme.dart';
 
+import 'custom_themes/expansion_tile_theme.dart';
 import 'custom_themes/input_decoration_theme.dart';
 
 class AppThemes {
@@ -17,15 +19,8 @@ class AppThemes {
     iconTheme: const IconThemeData(color: Colors.black),
     elevatedButtonTheme: MyElevatedButtonTheme.lightElevatedButtonTheme,
     listTileTheme: MyListTileTheme.lightListTileTheme,
-    snackBarTheme: const SnackBarThemeData(
-      showCloseIcon: true,
-      closeIconColor: Colors.white,
-      elevation: 4,
-      backgroundColor: Colors.green,
-      contentTextStyle: TextStyle(color: Colors.white),
-      behavior: SnackBarBehavior.floating,
-      dismissDirection: DismissDirection.horizontal,
-    ),
+    snackBarTheme: MySnackBarTheme.lightSnackBarTheme,
+    expansionTileTheme: MyExpansionTileTheme.lightExpansionTileTheme,
   );
 
   static final ThemeData darkTheme = ThemeData(
@@ -39,14 +34,7 @@ class AppThemes {
     iconTheme: const IconThemeData(color: Colors.white),
     elevatedButtonTheme: MyElevatedButtonTheme.darkElevatedButtonTheme,
     listTileTheme: MyListTileTheme.darkListTileTheme,
-    snackBarTheme: const SnackBarThemeData(
-      showCloseIcon: true,
-      closeIconColor: Colors.white,
-      elevation: 4,
-      backgroundColor: Colors.green,
-      contentTextStyle: TextStyle(color: Colors.white),
-      behavior: SnackBarBehavior.floating,
-      dismissDirection: DismissDirection.horizontal,
-    ),
+    snackBarTheme: MySnackBarTheme.darkSnackBarTheme,
+    expansionTileTheme: MyExpansionTileTheme.darkExpansionTileTheme,
   );
 }
