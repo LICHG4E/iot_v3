@@ -1,13 +1,14 @@
+import 'dart:math';
+
 import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:iot_v3/pages/drawer_pages/user_provider.dart';
+import 'package:iot_v3/pages/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:rive/rive.dart';
-
-import '../app_theme/theme_provider.dart';
 import '../constants/routes.dart';
+import '../tasks/alert_task.dart';
 
 class HomePage extends StatefulWidget {
   final String userUID;
@@ -82,8 +83,6 @@ class _HomePageState extends State<HomePage> {
         }
       }
     } catch (e) {
-      // Handle errors
-
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -119,12 +118,62 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> deleteDevice(int index) async {
+    bool confirmDelete = await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Confirm Delete'),
+              content: const Text('Are you sure you want to delete this device?'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(false); // Dismiss the dialog and return false
+                  },
+                  child: Text(
+                    'Cancel',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).primaryColor,
+                        ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true); // Dismiss the dialog and return true
+                  },
+                  child: Text(
+                    'Delete',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Theme.of(context).primaryColor,
+                        ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false; // Default to false if the dialog is dismissed without any action
+
+    if (confirmDelete) {
+      await FirebaseFirestore.instance.collection('users').doc(widget.userUID).update({
+        'devices': FieldValue.arrayRemove([devicesData[index]]),
+      });
+      fetchUserData();
+    }
+  }
+
   Future<void> logout() async {
+    NotificationTask.stopService();
     await FirebaseAuth.instance.signOut();
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+    final int divisor = isPortrait ? 250 : 200;
+    final currentCount = (MediaQuery.of(context).size.width ~/ divisor).toInt();
+    const minCount = 2;
+    final crossAxisCount = max(currentCount, minCount);
     return Scaffold(
       floatingActionButton: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -156,12 +205,23 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(100.0),
                   color: Colors.white,
                 ),
-                child: const SizedBox(
-                  height: 300,
-                  child: RiveAnimation.asset(
-                    'assets/animations/plants.riv',
-                    fit: BoxFit.contain,
-                  ),
+                child: Stack(
+                  children: [
+                    const SizedBox(
+                      height: 300,
+                      child: RiveAnimation.asset(
+                        'assets/animations/plants.riv',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("PlantCare",
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Theme.of(context).primaryColor)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -266,32 +326,32 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Consumer<ThemeProvider>(
-                  builder: (context, provider, child) {
-                    return Row(
-                      children: [
-                        const SizedBox(width: 16),
-                        Switch(
-                          value: provider.isLight,
-                          onChanged: (value) {
-                            setState(() {
-                              Provider.of<ThemeProvider>(context, listen: false).toggleTheme(value);
-                            });
-                          },
-                          thumbIcon: WidgetStatePropertyAll(
-                              provider.isLight ? const Icon(Icons.light_mode) : const Icon(Icons.dark_mode)),
-                          activeColor: Theme.of(context).primaryColor,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                const SizedBox(width: 16),
-              ],
-            ),
+            // Row(
+            //   mainAxisAlignment: MainAxisAlignment.end,
+            //   children: [
+            //     Consumer<ThemeProvider>(
+            //       builder: (context, provider, child) {
+            //         return Row(
+            //           children: [
+            //             const SizedBox(width: 16),
+            //             Switch(
+            //               value: provider.isLight,
+            //               onChanged: (value) {
+            //                 setState(() {
+            //                   Provider.of<ThemeProvider>(context, listen: false).toggleTheme(value);
+            //                 });
+            //               },
+            //               thumbIcon: WidgetStatePropertyAll(
+            //                   provider.isLight ? const Icon(Icons.light_mode) : const Icon(Icons.dark_mode)),
+            //               activeColor: Theme.of(context).primaryColor,
+            //             ),
+            //           ],
+            //         );
+            //       },
+            //     ),
+            //     const SizedBox(width: 16),
+            //   ],
+            // ),
             const SizedBox(height: 40.0),
           ],
         ),
@@ -312,18 +372,18 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "Your devices:",
+                    "Your devices ",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16.0),
                   Expanded(
                     child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
                         crossAxisSpacing: 16.0,
                         mainAxisSpacing: 16.0,
                       ),
-                      itemCount: devicesData.length + 1, // Include the + button card
+                      itemCount: devicesData.length + 1,
                       itemBuilder: (context, index) {
                         if (index < devicesData.length) {
                           return GestureDetector(
@@ -335,36 +395,52 @@ class _HomePageState extends State<HomePage> {
                               );
                             },
                             child: Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Device ${index + 1}',
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                              child: Stack(
+                                children: [
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.delete),
+                                      onPressed: () {
+                                        deleteDevice(index);
+                                      },
                                     ),
-                                    const SizedBox(height: 8.0),
-                                    Text(
-                                      devicesData[index],
-                                      textAlign: TextAlign.center,
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Device ${index + 1}',
+                                            textAlign: TextAlign.center,
+                                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
-                                    ),
-                                    const SizedBox(height: 8.0),
-                                    Text(
-                                      'Details...',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
+                                          const SizedBox(height: 8.0),
+                                          Text(
+                                            devicesData[index],
+                                            textAlign: TextAlign.center,
+                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
+                                          const SizedBox(height: 8.0),
+                                          Text(
+                                            'Details...',
+                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          // Replace with actual device details if needed
+                                        ],
+                                      ),
                                     ),
-                                    // Replace with actual device details if needed
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           );

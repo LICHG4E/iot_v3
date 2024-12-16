@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 class UserProvider with ChangeNotifier {
   User? _user;
+  List<dynamic> devicesData = [];
 
   User? get user => _user;
 

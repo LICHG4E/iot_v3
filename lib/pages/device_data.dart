@@ -1,12 +1,12 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:iot_v3/pages/providers/settings_provider.dart';
 import 'package:provider/provider.dart';
-
-import 'drawer_pages/settings_provider.dart';
 
 class DeviceDataPage extends StatefulWidget {
   final String? deviceId;
@@ -63,6 +63,11 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+    final int divisor = isPortrait ? 250 : 200;
+    final currentCount = (MediaQuery.of(context).size.width ~/ divisor).toInt();
+    const minCount = 2;
+    final crossAxisCount = max(currentCount, minCount);
     return Scaffold(
       appBar: AppBar(title: Text('Device : ${widget.deviceId}')),
       body: isLoading
@@ -137,7 +142,7 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                       child: GridView.count(
                         physics: const NeverScrollableScrollPhysics(),
                         shrinkWrap: true,
-                        crossAxisCount: 2,
+                        crossAxisCount: crossAxisCount,
                         crossAxisSpacing: 8.0,
                         mainAxisSpacing: 8.0,
                         children: [

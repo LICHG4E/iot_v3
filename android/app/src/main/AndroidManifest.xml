@@ -4,6 +4,9 @@
       Permission to use here depends on the value you picked for foregroundServiceType - see the Android documentation.
       Eg, if you picked 'location', use 'android.permission.FOREGROUND_SERVICE_LOCATION'
     -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_..." />
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
@@ -29,6 +32,7 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -38,7 +42,7 @@
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <service
                 android:name="id.flutter.flutter_background_service.BackgroundService"
-                android:foregroundServiceType="specialUse"
+                android:foregroundServiceType="dataSync"
         />
         <meta-data
             android:name="flutterEmbedding"

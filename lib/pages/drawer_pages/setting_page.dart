@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:iot_v3/app_theme/theme_provider.dart';
 import 'package:provider/provider.dart';
-import 'settings_provider.dart';
+
+import '../providers/settings_provider.dart';
 
 class SettingPage extends StatelessWidget {
   const SettingPage({super.key});
@@ -64,12 +65,25 @@ class SettingPage extends StatelessWidget {
               //   },
               // ),
               // const SizedBox(height: 16),
+
               _buildNumberSelector(
                 title: "Chart points number ",
                 value: settings.chartPoints,
                 onChanged: (value) {
                   settings.setChartPoints(value.toInt());
                 },
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile(
+                title: const Text('Push Fire Notifications'),
+                value: settings.pushFireNotifications,
+                onChanged: (value) {
+                  settings.setPushFireNotifications(value);
+                },
+                activeColor: Theme.of(context).primaryColor,
+                tileColor: Colors.transparent,
+                thumbIcon:
+                    WidgetStatePropertyAll(settings.pushFireNotifications ? const Icon(Icons.check) : const Icon(Icons.close)),
               ),
               const SizedBox(height: 16),
               // Temperature Range
