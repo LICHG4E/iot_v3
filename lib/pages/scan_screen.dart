@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:iot_v3/widgets/app_widgets.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 class ScanScreen extends StatefulWidget {
@@ -14,11 +15,15 @@ class ScanScreen extends StatefulWidget {
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
-class _ScanScreenState extends State<ScanScreen> {
-  String _predictionResult = "No result"; // Store the prediction result
-  bool _isProcessing = false; // Track if model inference is ongoing
-  late Interpreter _interpreter; // TensorFlow Lite interpreter
+class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateMixin {
+  String _predictedLabel = "";
+  double _confidence = 0.0;
+  bool _isProcessing = false;
+  bool _hasScanned = false;
+  late Interpreter _interpreter;
   late InterpreterOptions interpreterOptions;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   // List of labels (hardcoded)
   final List<String> _labels = [
@@ -65,12 +70,21 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   void initState() {
     super.initState();
-    loadModel(); // Load the TFLite model
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+    _animationController.forward();
+    loadModel();
   }
 
   @override
   void dispose() {
-    _interpreter.close(); // Release model resources
+    _animationController.dispose();
+    _interpreter.close();
     super.dispose();
   }
 
@@ -160,8 +174,7 @@ class _ScanScreenState extends State<ScanScreen> {
     interpreter.run(inputImage as Object, outputBuffer);
 
     // Find the index of the highest confidence score
-    final predictedIndex = (outputBuffer[0] as List<double>)
-        .indexWhere((value) => value == (outputBuffer[0] as List<double>).reduce((a, b) => a > b ? a : b));
+    final predictedIndex = (outputBuffer[0] as List<double>).indexWhere((value) => value == (outputBuffer[0] as List<double>).reduce((a, b) => a > b ? a : b));
     final predictedLabel = labels[predictedIndex];
 
     // Use the readable labels map
@@ -204,56 +217,403 @@ class _ScanScreenState extends State<ScanScreen> {
     return [inputBuffer];
   }
 
+  Future<void> _runScan() async {
+    setState(() {
+      _isProcessing = true;
+      _hasScanned = false;
+    });
+
+    try {
+      String result = await runInferenceInIsolate(widget.imagePath, _labels, _interpreter);
+
+      // Parse result to extract label and confidence
+      final parts = result.split('(');
+      final label = parts[0].replaceAll('Prediction: ', '').trim();
+      final confidenceStr = parts.length > 1 ? parts[1].replaceAll('%)', '').trim() : '0';
+
+      setState(() {
+        _predictedLabel = label;
+        _confidence = double.tryParse(confidenceStr) ?? 0.0;
+        _isProcessing = false;
+        _hasScanned = true;
+      });
+
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Scan complete!',
+          type: SnackBarType.success,
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+      });
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Scan failed: ${e.toString()}',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final imageFile = File(widget.imagePath);
+    final size = MediaQuery.of(context).size;
+    final theme = Theme.of(context);
+    final isHealthy = _predictedLabel.toLowerCase().contains('healthy');
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Scan Preview'),
+        title: const Text('Plant Disease Detection'),
+        centerTitle: true,
+        actions: [
+          if (_hasScanned)
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: () {
+                // Share functionality could be added here
+                AppWidgets.showSnackBar(
+                  context: context,
+                  message: 'Share feature coming soon!',
+                  type: SnackBarType.info,
+                );
+              },
+            ),
+        ],
       ),
-      body: Center(
+      body: FadeTransition(
+        opacity: _fadeAnimation,
         child: SingleChildScrollView(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Image preview with modern card
               Container(
-                  height: MediaQuery.of(context).size.height * 0.6,
-                  child: Image.file(
-                    imageFile,
-                    fit: BoxFit.contain,
-                  )), // Display the image
-              const SizedBox(height: 20),
-              _isProcessing
-                  ? const CircularProgressIndicator()
-                  : ElevatedButton(
-                      onPressed: () async {
-                        setState(() {
-                          _isProcessing = true;
-                        });
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    children: [
+                      Image.file(
+                        imageFile,
+                        height: size.height * 0.5,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                      if (_hasScanned)
+                        Positioned(
+                          top: 16,
+                          right: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isHealthy ? Colors.green.withOpacity(0.9) : Colors.orange.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isHealthy ? Icons.check_circle : Icons.warning,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  isHealthy ? 'Healthy' : 'Disease Detected',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
 
-                        // Run inference in isolate
-                        String result = await runInferenceInIsolate(widget.imagePath, _labels, _interpreter);
+              const SizedBox(height: 8),
 
-                        setState(() {
-                          _predictionResult = result;
-                          _isProcessing = false;
-                        });
-                      },
-                      child: const Text(
-                        'Scan',
+              // Scan button or loading
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _isProcessing
+                    ? Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(
+                              color: theme.primaryColor,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Analyzing plant...',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'This may take a few seconds',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : !_hasScanned
+                        ? SizedBox(
+                            height: 56,
+                            child: ElevatedButton.icon(
+                              onPressed: _runScan,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 2,
+                              ),
+                              icon: const Icon(Icons.document_scanner, size: 24),
+                              label: const Text(
+                                'Scan Plant',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+              ),
+
+              // Results section
+              if (_hasScanned && !_isProcessing) ...[
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isHealthy
+                            ? [
+                                Colors.green.shade50,
+                                Colors.green.shade100,
+                              ]
+                            : [
+                                Colors.orange.shade50,
+                                Colors.orange.shade100,
+                              ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isHealthy ? Colors.green.shade200 : Colors.orange.shade200,
+                        width: 2,
                       ),
                     ),
-              const SizedBox(height: 20),
-              Text(
-                _predictionResult,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: isHealthy ? Colors.green.shade600 : Colors.orange.shade600,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                isHealthy ? Icons.local_florist : Icons.bug_report,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Detection Result',
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _predictedLabel,
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isHealthy ? Colors.green.shade900 : Colors.orange.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Confidence',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                '${_confidence.toStringAsFixed(1)}%',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.primaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Recommendations section
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.lightbulb, color: theme.primaryColor, size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Recommendations',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildRecommendation(
+                          icon: Icons.water_drop,
+                          text: isHealthy ? 'Continue regular watering schedule' : 'Adjust watering - avoid overwatering',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildRecommendation(
+                          icon: Icons.wb_sunny,
+                          text: 'Ensure adequate sunlight exposure',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildRecommendation(
+                          icon: Icons.eco,
+                          text: isHealthy ? 'Plant appears healthy - maintain current care' : 'Consider consulting a plant expert for treatment',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Scan again button
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: theme.primaryColor,
+                      side: BorderSide(color: theme.primaryColor),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text(
+                      'Scan Another Plant',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRecommendation({required IconData icon, required String text}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey.shade600),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -17,6 +17,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _confirmPasswordController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
+  bool _passwordVisible = false;
+  bool _confirmPasswordVisible = false;
 
   @override
   void initState() {
@@ -105,223 +107,357 @@ class _ProfilePageState extends State<ProfilePage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           color: Colors.white,
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       extendBodyBehindAppBar: true,
       body: SingleChildScrollView(
-        child: Stack(
+        child: Column(
           children: [
-            Positioned(
-              top: -MediaQuery.of(context).size.height * 0.43,
-              left: -MediaQuery.of(context).size.width * 0.25,
-              child: Container(
-                width: MediaQuery.of(context).size.width * 1.5,
-                height: MediaQuery.of(context).size.width * 1.5,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [Colors.green, Colors.lightGreen],
-                  ),
-                  shape: BoxShape.circle,
+            // GRADIENT HEADER WITH PROFILE ICON
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 80, 16, 40),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Theme.of(context).primaryColor,
+                    Theme.of(context).primaryColor.withOpacity(0.7),
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 70),
+                  // Profile Icon
+                  Hero(
+                    tag: 'profile_icon',
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.person,
+                        size: 80,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // User Name
+                  Text(
+                    (user?.displayName != null && user!.displayName!.isNotEmpty) ? user.displayName! : 'User Profile',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Email with verification badge
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      Icon(
+                        user?.emailVerified == true ? Icons.verified : Icons.email,
+                        color: Colors.white.withOpacity(0.9),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
                       Text(
-                        (user?.displayName != null && user!.displayName!.isNotEmpty) ? user.displayName! : 'User Name',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Colors.white,
-                            ),
+                        user?.email ?? 'No email',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+
+            // FORM SECTION
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 8),
+
+                  // Email Verification Warning (if needed)
+                  if (user?.emailVerified == false)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.amber[700]),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Email Not Verified',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber[900],
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Please verify your email to update your account information.',
+                            style: TextStyle(
+                              color: Colors.amber[900],
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: isButtonEnabled
+                                ? () async {
+                                    setState(() => isButtonEnabled = false);
+                                    try {
+                                      await user!.sendEmailVerification();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Row(
+                                              children: [
+                                                Icon(Icons.check_circle, color: Colors.white),
+                                                SizedBox(width: 12),
+                                                Text('Verification email sent!'),
+                                              ],
+                                            ),
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                    } catch (error) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Error: $error'),
+                                            backgroundColor: Colors.red,
+                                            behavior: SnackBarBehavior.floating,
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      Future.delayed(const Duration(seconds: 30), () {
+                                        if (mounted) setState(() => isButtonEnabled = true);
+                                      });
+                                    }
+                                  }
+                                : null,
+                            icon: const Icon(Icons.send),
+                            label: const Text('Send Verification Email'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber[700],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Form Card
                   Container(
-                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(1),
-                          spreadRadius: 1,
-                          blurRadius: 1,
-                          offset: const Offset(0, 1),
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Icon(
-                      Icons.person,
-                      size: 130,
-                      color: Theme.of(context).primaryColor,
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Update Profile',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Name Field
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Display Name',
+                              hintText: user?.displayName ?? 'Enter your name',
+                              prefixIcon: const Icon(Icons.person_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context).scaffoldBackgroundColor,
+                            ),
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (value.length < 3) {
+                                  return 'Name must be at least 3 characters';
+                                }
+                                if (value == user?.displayName) {
+                                  return 'Enter a different name';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Email Field
+                          TextFormField(
+                            controller: _emailController,
+                            enabled: user?.emailVerified == true,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              hintText: user?.email ?? 'Enter your email',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context).scaffoldBackgroundColor,
+                            ),
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty) {
+                                if (!_validateEmail(value)) {
+                                  return 'Enter a valid email';
+                                }
+                                if (value == user?.email) {
+                                  return 'Enter a different email';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Password Field
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: !_passwordVisible,
+                            decoration: InputDecoration(
+                              labelText: 'New Password',
+                              hintText: 'Enter new password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _passwordVisible ? Icons.visibility_off : Icons.visibility,
+                                ),
+                                onPressed: () {
+                                  setState(() => _passwordVisible = !_passwordVisible);
+                                },
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context).scaffoldBackgroundColor,
+                            ),
+                            validator: (value) {
+                              if (value != null && value.isNotEmpty && value.length < 6) {
+                                return 'Password must be at least 6 characters';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Confirm Password Field
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: !_confirmPasswordVisible,
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password',
+                              hintText: 'Re-enter password',
+                              prefixIcon: const Icon(Icons.lock_reset),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _confirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                                ),
+                                onPressed: () {
+                                  setState(() => _confirmPasswordVisible = !_confirmPasswordVisible);
+                                },
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Theme.of(context).scaffoldBackgroundColor,
+                            ),
+                            validator: (value) {
+                              if (_passwordController.text.isNotEmpty && value != _passwordController.text) {
+                                return 'Passwords do not match';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Update Button
+                          ElevatedButton(
+                            onPressed: _updateProfile,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            child: const Text(
+                              'Update Profile',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 60),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              TextFormField(
-                                controller: _nameController,
-                                decoration: InputDecoration(
-                                  labelText: (user?.displayName != null && user!.displayName!.isNotEmpty)
-                                      ? user.displayName!
-                                      : 'User Name',
-                                  prefixIcon: const Icon(Icons.person),
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return null;
-                                  } else if (value.length < 3) {
-                                    return 'Name must be at least 3 characters long';
-                                  } else if (value == user?.displayName) {
-                                    return 'Name must be different from the current name';
-                                  }
-
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _emailController,
-                                enabled: user?.emailVerified == true,
-                                decoration: InputDecoration(
-                                  labelText: user?.email ?? 'Email',
-                                  prefixIcon: const Icon(Icons.email),
-                                ),
-                                validator: (value) {
-                                  if (value!.isNotEmpty && !_validateEmail(value)) {
-                                    return 'Please enter a valid email';
-                                  } else if (value == user?.email) {
-                                    return 'Email must be different from the current email';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _passwordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'New Password',
-                                  prefixIcon: Icon(Icons.lock),
-                                ),
-                                validator: (value) {
-                                  if (value != null && value.isNotEmpty && value.length < 6) {
-                                    return 'Password must be at least 6 characters long';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _confirmPasswordController,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  labelText: 'Confirm Password',
-                                  prefixIcon: Icon(Icons.lock_outline),
-                                ),
-                                validator: (value) {
-                                  if (_passwordController.text.isNotEmpty && value != _passwordController.text) {
-                                    return 'Passwords do not match';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 60),
-                              ElevatedButton(
-                                onPressed: _updateProfile,
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 50),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                ),
-                                child: const Text('Update Profile'),
-                              ),
-                              const SizedBox(height: 32),
-                              if (user?.emailVerified == false)
-                                Column(
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      children: [
-                                        Icon(
-                                          Icons.info,
-                                          color: Theme.of(context).hintColor,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            'You need to verify your email before you can update it.',
-                                            softWrap: true,
-                                            maxLines: 2,
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  color: Theme.of(context).hintColor,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton(
-                                      onPressed: isButtonEnabled
-                                          ? () async {
-                                              setState(() {
-                                                isButtonEnabled = false;
-                                              });
-                                              try {
-                                                await user!.sendEmailVerification();
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Verification email sent!'),
-                                                  ),
-                                                );
-                                              } catch (error) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Failed to send verification email: $error'),
-                                                  ),
-                                                );
-                                              } finally {
-                                                // Re-enable the button after a cooldown period (e.g., 30 seconds)
-                                                Future.delayed(const Duration(seconds: 30), () {
-                                                  setState(() {
-                                                    isButtonEnabled = true;
-                                                  });
-                                                });
-                                              }
-                                            }
-                                          : null,
-                                      child: const Text('Send Email'),
-                                    ),
-                                  ],
-                                )
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),

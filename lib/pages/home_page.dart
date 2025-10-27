@@ -4,7 +4,10 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:iot_v3/app_theme/theme_provider.dart';
+import 'package:iot_v3/constants/app_constants.dart';
 import 'package:iot_v3/pages/providers/user_provider.dart';
+import 'package:iot_v3/widgets/app_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:rive/rive.dart';
 import '../constants/routes.dart';
@@ -119,52 +122,228 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> deleteDevice(int index) async {
-    bool confirmDelete = await showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Confirm Delete'),
-              content: const Text('Are you sure you want to delete this device?'),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(false); // Dismiss the dialog and return false
-                  },
-                  child: Text(
-                    'Cancel',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).primaryColor,
-                        ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(true); // Dismiss the dialog and return true
-                  },
-                  child: Text(
-                    'Delete',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).primaryColor,
-                        ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ) ??
-        false; // Default to false if the dialog is dismissed without any action
-
-    if (confirmDelete) {
-      await FirebaseFirestore.instance.collection('users').doc(widget.userUID).update({
-        'devices': FieldValue.arrayRemove([devicesData[index]]),
-      });
-      fetchUserData();
+    await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
+      'devices': FieldValue.arrayRemove([devicesData[index]]),
+    });
+    await fetchUserData();
+    if (mounted) {
+      AppWidgets.showSnackBar(
+        context: context,
+        message: 'Device removed successfully',
+        type: SnackBarType.success,
+      );
     }
   }
 
   Future<void> logout() async {
     NotificationTask.stopService();
     await FirebaseAuth.instance.signOut();
+  }
+
+  /// Handles scanned device QR code
+  Future<void> _handleScannedDevice(String scannedData) async {
+    final cleanedData = scannedData.replaceAll('/', '').trim();
+
+    if (isDeviceOwned(cleanedData)) {
+      if (!mounted) return;
+      AppWidgets.showSnackBar(
+        context: context,
+        message: 'You already own this device!',
+        type: SnackBarType.warning,
+      );
+      return;
+    }
+
+    final deviceExists = await checkDeviceExists(cleanedData);
+    if (!mounted) return;
+
+    if (deviceExists) {
+      await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
+        'devices': FieldValue.arrayUnion([cleanedData]),
+      });
+      await updateUserData(cleanedData);
+      await fetchUserData();
+      AppWidgets.showSnackBar(
+        context: context,
+        message: 'Device added successfully!',
+        type: SnackBarType.success,
+      );
+    } else {
+      AppWidgets.showSnackBar(
+        context: context,
+        message: 'Device not found. Please try again.',
+        type: SnackBarType.error,
+      );
+    }
+  }
+
+  /// Builds a device card widget
+  Widget _buildDeviceCard(int index) {
+    return Hero(
+      tag: 'device_${devicesData[index]}',
+      child: Card(
+        child: InkWell(
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              deviceDataPage,
+              arguments: devicesData[index],
+            );
+          },
+          borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+          child: Stack(
+            children: [
+              // Delete button
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  color: Colors.red.shade400,
+                  onPressed: () async {
+                    final confirmed = await AppWidgets.showConfirmationDialog(
+                      context: context,
+                      title: 'Delete Device',
+                      message: 'Are you sure you want to remove this device?',
+                      confirmText: 'Delete',
+                      isDangerous: true,
+                    );
+                    if (confirmed) {
+                      await deleteDevice(index);
+                    }
+                  },
+                ),
+              ),
+              // Device content
+              Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.devices_other,
+                        size: 26,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Device ${index + 1}',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Flexible(
+                      child: Text(
+                        devicesData[index],
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey.shade600,
+                              fontSize: 10,
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.circle,
+                            size: 6,
+                            color: Colors.green.shade700,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Active',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the add device card
+  Widget _buildAddDeviceCard() {
+    return Card(
+      color: Theme.of(context).primaryColor.withOpacity(0.1),
+      child: InkWell(
+        onTap: () async {
+          final scannedData = await Navigator.pushNamed(context, deviceQRScanner);
+          if (scannedData != null) {
+            await _handleScannedDevice(scannedData as String);
+          }
+        },
+        borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  size: 32,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Add Device',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Scan QR Code',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -217,8 +396,7 @@ class _HomePageState extends State<HomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("PlantCare",
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Theme.of(context).primaryColor)),
+                        Text("PlantCare", style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Theme.of(context).primaryColor)),
                       ],
                     ),
                   ],
@@ -275,50 +453,23 @@ class _HomePageState extends State<HomePage> {
                       title: const Text('Logout'),
                       leading: const Icon(Icons.logout),
                       onTap: () async {
-                        // Show the confirmation dialog
-                        bool confirmLogout = await showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: const Text('Confirm Logout'),
-                                  content: const Text('Are you sure you want to log out?'),
-                                  actions: <Widget>[
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop(false); // Dismiss the dialog and return false
-                                      },
-                                      child: Text(
-                                        'Cancel',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                              color: Theme.of(context).primaryColor,
-                                            ),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop(true); // Dismiss the dialog and return true
-                                      },
-                                      child: Text(
-                                        'Logout',
-                                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                              color: Theme.of(context).primaryColor,
-                                            ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ) ??
-                            false; // Default to false if the dialog is dismissed without any action
+                        final confirmLogout = await AppWidgets.showConfirmationDialog(
+                          context: context,
+                          title: 'Confirm Logout',
+                          message: 'Are you sure you want to log out?',
+                          confirmText: 'Logout',
+                          isDangerous: true,
+                        );
 
-                        // Proceed with logout if confirmed
                         if (confirmLogout) {
                           await logout();
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            loginPage,
-                            (route) => false,
-                          );
+                          if (mounted) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              loginPage,
+                              (route) => false,
+                            );
+                          }
                         }
                       },
                     ),
@@ -357,193 +508,79 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: isLoading
-          ? const Center(
+          ? Center(
               child: SizedBox(
                 height: 300,
-                child: RiveAnimation.asset(
-                  'assets/animations/plant_logo_loading_in_lightmode.riv',
-                  fit: BoxFit.contain,
+                child: Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, _) {
+                    return RiveAnimation.asset(
+                      themeProvider.isLight ? AppConstants.plantLogoLightPath : AppConstants.plantLogoDarkPath,
+                      fit: BoxFit.contain,
+                    );
+                  },
                 ),
               ),
             )
-          : Container(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Your devices ",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16.0),
-                  Expanded(
-                    child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 16.0,
-                        mainAxisSpacing: 16.0,
-                      ),
-                      itemCount: devicesData.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index < devicesData.length) {
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                deviceDataPage,
-                                arguments: devicesData[index],
-                              );
-                            },
-                            child: Card(
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                    top: 0,
-                                    right: 0,
-                                    child: IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () {
-                                        deleteDevice(index);
-                                      },
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(
-                                            'Device ${index + 1}',
-                                            textAlign: TextAlign.center,
-                                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                          const SizedBox(height: 8.0),
-                                          Text(
-                                            devicesData[index],
-                                            textAlign: TextAlign.center,
-                                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                          const SizedBox(height: 8.0),
-                                          Text(
-                                            'Details...',
-                                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                          // Replace with actual device details if needed
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        } else {
-                          // The + button card
-                          return GestureDetector(
-                            onTap: () async {
-                              // Perform navigation and check after the QR scan
-                              Object? scannedData = await Navigator.pushNamed(context, deviceQRScanner);
-                              if (scannedData != null) {
-                                scannedData = scannedData as String;
-                                scannedData = scannedData.replaceAll('/', '').trim();
-
-                                bool deviceOwned = isDeviceOwned(scannedData);
-
-                                if (deviceOwned) {
-                                  showDialog(
-                                      context: context,
-                                      builder: (context) {
-                                        return AlertDialog(
-                                          title: const Text('Device already added'),
-                                          content: const Text('You already own this device!'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Text(
-                                                'OK',
-                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                      color: Theme.of(context).primaryColor,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      });
-                                }
-
-                                bool deviceExists = await checkDeviceExists(scannedData);
-
-                                if (deviceExists) {
-                                  // If the device exists, update Firestore
-                                  await FirebaseFirestore.instance.collection('users').doc(widget.userUID).update({
-                                    'devices': FieldValue.arrayUnion([scannedData]),
-                                  });
-                                  await updateUserData(scannedData);
-                                  fetchUserData();
-                                } else {
-                                  showDialog(
-                                      context: context,
-                                      builder: (context) {
-                                        return AlertDialog(
-                                          title: const Text('Device not found'),
-                                          content: const Text('The device you scanned does not exist. Please try again.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: Text(
-                                                'OK',
-                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                      color: Theme.of(context).primaryColor,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      });
-                                }
-                              }
-                            },
-                            child: Card(
-                              color: Theme.of(context).primaryColor,
-                              child: const Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add,
-                                      size: 40.0,
-                                      color: Colors.white,
-                                    ),
-                                    SizedBox(height: 8.0),
-                                    Text(
-                                      'Add Device',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
+          : RefreshIndicator(
+              onRefresh: fetchUserData,
+              child: devicesData.isEmpty
+                  ? AppWidgets.emptyState(
+                      message: 'No devices found.\nAdd your first IoT device to get started!',
+                      icon: Icons.devices_other,
+                      actionLabel: 'Add Device',
+                      onAction: () async {
+                        final scannedData = await Navigator.pushNamed(context, deviceQRScanner);
+                        if (scannedData != null) {
+                          await _handleScannedDevice(scannedData as String);
                         }
                       },
+                    )
+                  : Container(
+                      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "Your Devices",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '${devicesData.length} ${devicesData.length == 1 ? 'device' : 'devices'}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16.0),
+                          Expanded(
+                            child: GridView.builder(
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 16.0,
+                                mainAxisSpacing: 16.0,
+                                childAspectRatio: 1.0,
+                              ),
+                              itemCount: devicesData.length + 1,
+                              itemBuilder: (context, index) {
+                                if (index < devicesData.length) {
+                                  return _buildDeviceCard(index);
+                                } else {
+                                  return _buildAddDeviceCard();
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
             ),
     );
   }
