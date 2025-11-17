@@ -6,12 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iot_v3/app_theme/theme_provider.dart';
 import 'package:iot_v3/constants/app_constants.dart';
+import 'package:iot_v3/models/greenhouse.dart';
 import 'package:iot_v3/pages/providers/user_provider.dart';
 import 'package:iot_v3/widgets/app_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:rive/rive.dart';
+import 'package:uuid/uuid.dart';
 import '../constants/routes.dart';
 import '../tasks/alert_task.dart';
+
+enum _DeviceMenuAction { view, reassign, remove }
 
 class HomePage extends StatefulWidget {
   final String userUID;
@@ -25,8 +29,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   Map<String, dynamic>? userData;
-  List<dynamic> devicesData = [];
+  List<String> devicesData = [];
+  List<Greenhouse> _greenhouses = [];
   bool isLoading = true;
+  final Uuid _uuid = const Uuid();
+  static const String _createGreenhouseOption = '__create_greenhouse__';
 
   @override
   void initState() {
@@ -70,9 +77,12 @@ class _HomePageState extends State<HomePage> {
       final doc = await FirebaseFirestore.instance.collection('users').doc(widget.userUID).get();
 
       if (doc.exists) {
+        final data = doc.data();
+        final rawGreenhouses = (data?['greenhouses'] as List<dynamic>? ?? <dynamic>[]);
         setState(() {
-          userData = doc.data();
-          devicesData = userData?['devices'] ?? {};
+          userData = data;
+          devicesData = List<String>.from(data?['devices'] ?? <String>[]);
+          _greenhouses = rawGreenhouses.map((entry) => entry is Map<String, dynamic> ? Greenhouse.fromMap(entry) : null).whereType<Greenhouse>().toList();
           isLoading = false;
         });
       } else {
@@ -97,6 +107,25 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  List<String> get _unassignedDevices {
+    final assignedIds = _greenhouses.expand((g) => g.devices).toSet();
+    return devicesData.where((deviceId) => !assignedIds.contains(deviceId)).toList();
+  }
+
+  String _greenhouseLabel(String rawName) {
+    final trimmed = rawName.trim();
+    return trimmed.isEmpty ? 'Unnamed greenhouse' : trimmed;
+  }
+
+  Greenhouse? _findGreenhouseByDevice(String deviceId) {
+    for (final greenhouse in _greenhouses) {
+      if (greenhouse.devices.contains(deviceId)) {
+        return greenhouse;
+      }
+    }
+    return null;
+  }
+
   bool isDeviceOwned(String deviceId) {
     return devicesData.contains(deviceId);
   }
@@ -116,22 +145,36 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> updateUserData(String deviceId) async {
-    await FirebaseFirestore.instance.collection('users').doc(widget.userUID).update({
+    await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
       'devices': FieldValue.arrayUnion([deviceId]),
     });
   }
 
-  Future<void> deleteDevice(int index) async {
-    await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
-      'devices': FieldValue.arrayRemove([devicesData[index]]),
-    });
-    await fetchUserData();
-    if (mounted) {
-      AppWidgets.showSnackBar(
-        context: context,
-        message: 'Device removed successfully',
-        type: SnackBarType.success,
-      );
+  Future<void> deleteDevice(String deviceId) async {
+    try {
+      final updatedGreenhouses = _greenhouses.map((g) => g.copyWith(devices: List<String>.from(g.devices)..remove(deviceId))).toList();
+
+      await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
+        'devices': FieldValue.arrayRemove([deviceId]),
+        'greenhouses': updatedGreenhouses.map((g) => g.toMap()).toList(),
+      });
+
+      await fetchUserData();
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Device removed successfully',
+          type: SnackBarType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Failed to remove device: $e',
+          type: SnackBarType.error,
+        );
+      }
     }
   }
 
@@ -158,16 +201,15 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
 
     if (deviceExists) {
-      await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
-        'devices': FieldValue.arrayUnion([cleanedData]),
-      });
       await updateUserData(cleanedData);
       await fetchUserData();
+      if (!mounted) return;
       AppWidgets.showSnackBar(
         context: context,
-        message: 'Device added successfully!',
+        message: 'Device added successfully. Choose a greenhouse to finish setup.',
         type: SnackBarType.success,
       );
+      await _promptGreenhouseAssignment(cleanedData);
     } else {
       AppWidgets.showSnackBar(
         context: context,
@@ -178,45 +220,54 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Builds a device card widget
-  Widget _buildDeviceCard(int index) {
+  Widget _buildDeviceCard({
+    required String deviceId,
+    required int deviceNumber,
+    required String locationLabel,
+  }) {
     return Hero(
-      tag: 'device_${devicesData[index]}',
+      tag: 'device_$deviceId',
       child: Card(
         child: InkWell(
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              deviceDataPage,
-              arguments: devicesData[index],
-            );
-          },
+          onTap: () => _openDevice(deviceId),
           borderRadius: BorderRadius.circular(AppConstants.defaultBorderRadius),
           child: Stack(
             children: [
-              // Delete button
               Positioned(
-                top: 4,
-                right: 4,
-                child: IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  color: Colors.red.shade400,
-                  onPressed: () async {
-                    final confirmed = await AppWidgets.showConfirmationDialog(
-                      context: context,
-                      title: 'Delete Device',
-                      message: 'Are you sure you want to remove this device?',
-                      confirmText: 'Delete',
-                      isDangerous: true,
-                    );
-                    if (confirmed) {
-                      await deleteDevice(index);
+                top: 0,
+                right: 0,
+                child: PopupMenuButton<_DeviceMenuAction>(
+                  onSelected: (action) async {
+                    switch (action) {
+                      case _DeviceMenuAction.view:
+                        _openDevice(deviceId);
+                        break;
+                      case _DeviceMenuAction.reassign:
+                        await _promptGreenhouseAssignment(deviceId);
+                        break;
+                      case _DeviceMenuAction.remove:
+                        await _confirmDeleteDevice(deviceId);
+                        break;
                     }
                   },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _DeviceMenuAction.view,
+                      child: Text('View data'),
+                    ),
+                    PopupMenuItem(
+                      value: _DeviceMenuAction.reassign,
+                      child: Text('Reassign greenhouse'),
+                    ),
+                    PopupMenuItem(
+                      value: _DeviceMenuAction.remove,
+                      child: Text('Remove device'),
+                    ),
+                  ],
                 ),
               ),
-              // Device content
               Padding(
-                padding: const EdgeInsets.all(6.0),
+                padding: const EdgeInsets.all(12.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
@@ -233,32 +284,30 @@ class _HomePageState extends State<HomePage> {
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
-                      'Device ${index + 1}',
+                      'Device $deviceNumber',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                     ),
-                    const SizedBox(height: 2),
-                    Flexible(
-                      child: Text(
-                        devicesData[index],
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey.shade600,
-                              fontSize: 10,
-                            ),
-                      ),
-                    ),
                     const SizedBox(height: 4),
+                    Text(
+                      deviceId,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey.shade600,
+                            fontSize: 11,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.green.shade100,
@@ -268,15 +317,15 @@ class _HomePageState extends State<HomePage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.circle,
-                            size: 6,
+                            Icons.local_florist,
+                            size: 12,
                             color: Colors.green.shade700,
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 4),
                           Text(
-                            'Active',
+                            locationLabel,
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: FontWeight.w600,
                               color: Colors.green.shade700,
                             ),
@@ -289,6 +338,454 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _openDevice(String deviceId) {
+    Navigator.pushNamed(
+      context,
+      deviceDataPage,
+      arguments: deviceId,
+    );
+  }
+
+  Future<void> _confirmDeleteDevice(String deviceId) async {
+    final confirmed = await AppWidgets.showConfirmationDialog(
+      context: context,
+      title: 'Remove Device',
+      message: 'Are you sure you want to remove this device from your account?',
+      confirmText: 'Remove',
+      isDangerous: true,
+    );
+    if (confirmed) {
+      await deleteDevice(deviceId);
+    }
+  }
+
+  Future<void> _promptGreenhouseAssignment(String deviceId) async {
+    if (!mounted) return;
+
+    if (_greenhouses.isEmpty) {
+      final newId = await _showCreateGreenhouseDialog(shouldReturnId: true);
+      if (newId != null) {
+        await _assignDeviceToGreenhouse(deviceId, newId);
+      }
+      return;
+    }
+
+    final currentLocation = _findGreenhouseByDevice(deviceId);
+    final selection = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Text(
+                'Select greenhouse',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ..._greenhouses.map(
+                (greenhouse) => ListTile(
+                  title: Text(_greenhouseLabel(greenhouse.name)),
+                  trailing: greenhouse.id == currentLocation?.id ? const Icon(Icons.check) : null,
+                  onTap: () => Navigator.pop(sheetContext, greenhouse.id),
+                ),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: const Text('Create new greenhouse'),
+                onTap: () => Navigator.pop(sheetContext, _createGreenhouseOption),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (selection == null) {
+      return;
+    }
+
+    if (selection == _createGreenhouseOption) {
+      final newId = await _showCreateGreenhouseDialog(shouldReturnId: true);
+      if (newId != null) {
+        await _assignDeviceToGreenhouse(deviceId, newId);
+      }
+    } else {
+      await _assignDeviceToGreenhouse(deviceId, selection);
+    }
+  }
+
+  Future<String?> _showCreateGreenhouseDialog({bool shouldReturnId = false}) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('New greenhouse'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Greenhouse name',
+              hintText: 'e.g. South greenhouse',
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = controller.text.trim();
+                if (name.isEmpty) {
+                  AppWidgets.showSnackBar(
+                    context: context,
+                    message: 'Please enter a greenhouse name',
+                    type: SnackBarType.warning,
+                  );
+                  return;
+                }
+                final newId = await _createGreenhouse(name);
+                Navigator.pop(dialogContext, shouldReturnId ? newId : null);
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+    return result;
+  }
+
+  Future<String?> _createGreenhouse(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Greenhouse name cannot be empty',
+          type: SnackBarType.error,
+        );
+      }
+      return null;
+    }
+
+    final newGreenhouse = Greenhouse(
+      id: _uuid.v4(),
+      name: trimmed,
+      devices: const [],
+      createdAt: Timestamp.now(),
+    );
+
+    try {
+      await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
+        'greenhouses': [..._greenhouses, newGreenhouse].map((g) => g.toMap()).toList(),
+      });
+      await fetchUserData();
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Greenhouse created',
+          type: SnackBarType.success,
+        );
+      }
+      return newGreenhouse.id;
+    } catch (e) {
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Failed to create greenhouse: $e',
+          type: SnackBarType.error,
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<void> _showRenameGreenhouseDialog(Greenhouse greenhouse) async {
+    final controller = TextEditingController(text: greenhouse.name);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Rename greenhouse'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Greenhouse name',
+              hintText: 'e.g. East tunnel',
+            ),
+            textCapitalization: TextCapitalization.words,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final trimmed = controller.text.trim();
+                if (trimmed.isEmpty) {
+                  AppWidgets.showSnackBar(
+                    context: context,
+                    message: 'Please enter a greenhouse name',
+                    type: SnackBarType.warning,
+                  );
+                  return;
+                }
+                if (trimmed == greenhouse.name.trim()) {
+                  Navigator.pop(dialogContext);
+                  return;
+                }
+                await _renameGreenhouse(greenhouse, trimmed);
+                if (mounted) {
+                  Navigator.pop(dialogContext);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+  }
+
+  Future<void> _renameGreenhouse(Greenhouse greenhouse, String newName) async {
+    final updated = _greenhouses.map((g) {
+      if (g.id == greenhouse.id) {
+        return g.copyWith(name: newName);
+      }
+      return g;
+    }).toList();
+
+    try {
+      await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
+        'greenhouses': updated.map((g) => g.toMap()).toList(),
+      });
+      await fetchUserData();
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Greenhouse renamed',
+          type: SnackBarType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Failed to rename greenhouse: $e',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteGreenhouse(Greenhouse greenhouse) async {
+    final confirmed = await AppWidgets.showConfirmationDialog(
+      context: context,
+      title: 'Delete Greenhouse',
+      message: 'Are you sure you want to delete this greenhouse? All devices will be moved to unassigned.',
+      confirmText: 'Delete',
+      isDangerous: true,
+    );
+    if (confirmed) {
+      await _deleteGreenhouse(greenhouse);
+    }
+  }
+
+  Future<void> _deleteGreenhouse(Greenhouse greenhouse) async {
+    try {
+      final updatedGreenhouses = _greenhouses.where((g) => g.id != greenhouse.id).toList();
+
+      await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
+        'greenhouses': updatedGreenhouses.map((g) => g.toMap()).toList(),
+      });
+      await fetchUserData();
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Greenhouse deleted',
+          type: SnackBarType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Failed to delete greenhouse: $e',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _assignDeviceToGreenhouse(String deviceId, String greenhouseId) async {
+    try {
+      final updated = _greenhouses.map((g) {
+        final updatedDevices = List<String>.from(g.devices)..remove(deviceId);
+        if (g.id == greenhouseId && !updatedDevices.contains(deviceId)) {
+          updatedDevices.add(deviceId);
+        }
+        return g.copyWith(devices: updatedDevices);
+      }).toList();
+
+      if (!updated.any((g) => g.id == greenhouseId)) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Selected greenhouse not found',
+          type: SnackBarType.error,
+        );
+        return;
+      }
+
+      await FirebaseFirestore.instance.collection(AppConstants.usersCollection).doc(widget.userUID).update({
+        'greenhouses': updated.map((g) => g.toMap()).toList(),
+      });
+      await fetchUserData();
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Device assignment updated',
+          type: SnackBarType.success,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppWidgets.showSnackBar(
+          context: context,
+          message: 'Failed to assign device: $e',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
+  Widget _buildGreenhouseSection(Greenhouse greenhouse, int crossAxisCount) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    _greenhouseLabel(greenhouse.name),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${greenhouse.devices.length} ${greenhouse.devices.length == 1 ? 'device' : 'devices'}',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
+                    IconButton(
+                      tooltip: 'Rename greenhouse',
+                      icon: const Icon(Icons.edit_outlined, size: 20),
+                      onPressed: () => _showRenameGreenhouseDialog(greenhouse),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete greenhouse',
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      onPressed: () => _confirmDeleteGreenhouse(greenhouse),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            greenhouse.devices.isEmpty
+                ? Text(
+                    'No devices assigned yet. Use the menu on a device to move it here.',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  )
+                : GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 16.0,
+                      mainAxisSpacing: 16.0,
+                      childAspectRatio: 1.0,
+                    ),
+                    itemCount: greenhouse.devices.length,
+                    itemBuilder: (context, index) {
+                      final deviceId = greenhouse.devices[index];
+                      return _buildDeviceCard(
+                        deviceId: deviceId,
+                        deviceNumber: index + 1,
+                        locationLabel: _greenhouseLabel(greenhouse.name),
+                      );
+                    },
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnassignedSection(List<String> devices, int crossAxisCount) {
+    if (devices.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Unassigned devices',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  devices.length == 1 ? '1 device' : '${devices.length} devices',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 16.0,
+                mainAxisSpacing: 16.0,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: devices.length,
+              itemBuilder: (context, index) {
+                final deviceId = devices[index];
+                return _buildDeviceCard(
+                  deviceId: deviceId,
+                  deviceNumber: index + 1,
+                  locationLabel: 'Unassigned',
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -523,64 +1020,78 @@ class _HomePageState extends State<HomePage> {
             )
           : RefreshIndicator(
               onRefresh: fetchUserData,
-              child: devicesData.isEmpty
-                  ? AppWidgets.emptyState(
-                      message: 'No devices found.\nAdd your first IoT device to get started!',
-                      icon: Icons.devices_other,
-                      actionLabel: 'Add Device',
-                      onAction: () async {
-                        final scannedData = await Navigator.pushNamed(context, deviceQRScanner);
-                        if (scannedData != null) {
-                          await _handleScannedDevice(scannedData as String);
-                        }
-                      },
-                    )
-                  : Container(
-                      padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Your Devices',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Your Devices",
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                '${devicesData.length} ${devicesData.length == 1 ? 'device' : 'devices'}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            '${devicesData.length} ${devicesData.length == 1 ? 'device' : 'devices'}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
-                          const SizedBox(height: 16.0),
-                          Expanded(
-                            child: GridView.builder(
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: crossAxisCount,
-                                crossAxisSpacing: 16.0,
-                                mainAxisSpacing: 16.0,
-                                childAspectRatio: 1.0,
-                              ),
-                              itemCount: devicesData.length + 1,
-                              itemBuilder: (context, index) {
-                                if (index < devicesData.length) {
-                                  return _buildDeviceCard(index);
-                                } else {
-                                  return _buildAddDeviceCard();
-                                }
-                              },
+                          Text(
+                            '${_greenhouses.length} ${_greenhouses.length == 1 ? 'greenhouse' : 'greenhouses'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
                             ),
                           ),
                         ],
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showCreateGreenhouseDialog(),
+                      icon: const Icon(Icons.house_outlined),
+                      label: const Text('Add greenhouse'),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_greenhouses.isEmpty && _unassignedDevices.isEmpty && devicesData.isEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: AppWidgets.emptyState(
+                        message: 'No devices yet. Add a device and group it by greenhouse to get started.',
+                        icon: Icons.devices_other,
+                        actionLabel: 'Add Device',
+                        onAction: () async {
+                          final scannedData = await Navigator.pushNamed(context, deviceQRScanner);
+                          if (scannedData != null) {
+                            await _handleScannedDevice(scannedData as String);
+                          }
+                        },
+                      ),
+                    ),
+                  ] else ...[
+                    _buildUnassignedSection(_unassignedDevices, crossAxisCount),
+                    ..._greenhouses.map((greenhouse) => _buildGreenhouseSection(greenhouse, crossAxisCount)).toList(),
+                  ],
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 180,
+                    child: _buildAddDeviceCard(),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
     );
   }

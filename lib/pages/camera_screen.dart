@@ -4,6 +4,7 @@ import 'package:external_path/external_path.dart';
 import 'package:flutter/material.dart';
 import 'package:iot_v3/constants/routes.dart';
 import 'package:iot_v3/widgets/app_widgets.dart';
+import 'package:image/image.dart' as img;
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -22,6 +23,8 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
   bool isTakingPicture = false;
   Offset? focusPoint;
   bool isFlashOn = false;
+  bool showGuidelines = true;
+  String lightingQuality = 'good'; // 'good', 'dark', 'bright'
   late AnimationController _captureAnimationController;
   late AnimationController _focusAnimationController;
   late Animation<double> _captureAnimation;
@@ -82,12 +85,115 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
         ExternalPath.DIRECTORY_DCIM,
       );
       final fileName = 'PlantCare_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File('$downloadPath/$fileName');
-      await file.writeAsBytes(await image.readAsBytes());
-      return file;
+      final filePath = '$downloadPath/$fileName';
+
+      // Read and decode the image
+      final bytes = await image.readAsBytes();
+      final decodedImage = img.decodeImage(bytes);
+
+      if (decodedImage != null) {
+        // Calculate crop dimensions (90% of the smaller dimension, centered)
+        final cropSize = (decodedImage.width < decodedImage.height ? decodedImage.width : decodedImage.height) * 0.9;
+
+        final cropX = ((decodedImage.width - cropSize) / 2).round();
+        final cropY = ((decodedImage.height - cropSize) / 2).round();
+
+        // Crop to the guideline box size
+        final croppedImage = img.copyCrop(
+          decodedImage,
+          x: cropX,
+          y: cropY,
+          width: cropSize.round(),
+          height: cropSize.round(),
+        );
+
+        // Save the cropped image
+        final file = File(filePath);
+        await file.writeAsBytes(img.encodePng(croppedImage));
+        return file;
+      } else {
+        // Fallback: save original if decoding fails
+        final file = File(filePath);
+        await file.writeAsBytes(bytes);
+        return file;
+      }
     } catch (e) {
       debugPrint("Error saving image: $e");
       throw Exception("Failed to save image");
+    }
+  }
+
+  Future<bool> validateImageQuality(XFile image) async {
+    try {
+      final bytes = await image.readAsBytes();
+      final decodedImage = img.decodeImage(bytes);
+
+      if (decodedImage == null) return false;
+
+      // Check minimum resolution (should be at least 256x256)
+      if (decodedImage.width < 256 || decodedImage.height < 256) {
+        if (mounted) {
+          AppWidgets.showSnackBar(
+            context: context,
+            message: 'Image resolution too low. Move closer to the plant.',
+            type: SnackBarType.warning,
+          );
+        }
+        return false;
+      }
+
+      // Check if image is too dark or too bright
+      int totalBrightness = 0;
+      int sampleCount = 0;
+
+      // Sample pixels (every 10th pixel for performance)
+      for (int y = 0; y < decodedImage.height; y += 10) {
+        for (int x = 0; x < decodedImage.width; x += 10) {
+          final pixel = decodedImage.getPixel(x, y);
+          totalBrightness += ((pixel.r + pixel.g + pixel.b) / 3).round();
+          sampleCount++;
+        }
+      }
+
+      final avgBrightness = totalBrightness / sampleCount;
+
+      // Update lighting quality for UI feedback
+      setState(() {
+        if (avgBrightness < 50) {
+          lightingQuality = 'dark';
+        } else if (avgBrightness > 200) {
+          lightingQuality = 'bright';
+        } else {
+          lightingQuality = 'good';
+        }
+      });
+
+      if (avgBrightness < 40) {
+        if (mounted) {
+          AppWidgets.showSnackBar(
+            context: context,
+            message: 'Image too dark. Turn on flash or find better lighting.',
+            type: SnackBarType.warning,
+          );
+        }
+        return false;
+      }
+
+      if (avgBrightness > 220) {
+        if (mounted) {
+          AppWidgets.showSnackBar(
+            context: context,
+            message: 'Image too bright. Avoid direct sunlight.',
+            type: SnackBarType.warning,
+          );
+        }
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint("Image quality validation failed: $e");
+      return true; // Allow capture if validation fails
     }
   }
 
@@ -99,18 +205,28 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
 
     try {
       final image = await cameraController.takePicture();
+
+      // Validate image quality before saving
+      final isQualityGood = await validateImageQuality(image);
+
+      if (!isQualityGood) {
+        setState(() => isTakingPicture = false);
+        return;
+      }
+
       final file = await saveImage(image);
 
       setState(() {
         imageFile = image;
         imagePath = file.path;
         isTakingPicture = false;
+        showGuidelines = false; // Hide guidelines after first capture
       });
 
       if (mounted) {
         AppWidgets.showSnackBar(
           context: context,
-          message: 'Picture saved!',
+          message: 'Picture saved! ✓ Good quality detected',
           type: SnackBarType.success,
         );
       }
@@ -197,6 +313,22 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // Guidelines toggle
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: showGuidelines ? Colors.green.withOpacity(0.3) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: Icon(
+                showGuidelines ? Icons.grid_on : Icons.grid_off,
+                color: showGuidelines ? Colors.green : Colors.white,
+              ),
+              onPressed: () => setState(() => showGuidelines = !showGuidelines),
+              tooltip: showGuidelines ? 'Hide Guidelines' : 'Show Guidelines',
+            ),
+          ),
           // Flash toggle
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -250,7 +382,94 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
                 }
               },
             ),
-          ), // Focus indicator
+          ),
+
+          // Camera Guidelines Overlay
+          if (showGuidelines)
+            Center(
+              child: Container(
+                width: size.width * 0.9,
+                height: size.width * 0.9,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: theme.primaryColor,
+                    width: 3,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Stack(
+                  children: [
+                    // Corner markers
+                    Positioned(
+                      top: -3,
+                      left: -3,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: theme.primaryColor, width: 5),
+                            left: BorderSide(color: theme.primaryColor, width: 5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: -3,
+                      right: -3,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: theme.primaryColor, width: 5),
+                            right: BorderSide(color: theme.primaryColor, width: 5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -3,
+                      left: -3,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: theme.primaryColor, width: 5),
+                            left: BorderSide(color: theme.primaryColor, width: 5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -3,
+                      right: -3,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: theme.primaryColor, width: 5),
+                            right: BorderSide(color: theme.primaryColor, width: 5),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Center target
+                    Center(
+                      child: Icon(
+                        Icons.center_focus_weak,
+                        size: 80,
+                        color: theme.primaryColor.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Focus indicator
           if (focusPoint != null)
             AnimatedBuilder(
               animation: _focusAnimation,
@@ -408,50 +627,6 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
               ),
             ),
           ),
-
-          // Instructions overlay
-          if (!isTakingPicture && imageFile == null)
-            Positioned(
-              top: size.height * 0.15,
-              left: 0,
-              right: 0,
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 32),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.eco,
-                      color: theme.primaryColor,
-                      size: 40,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tap anywhere to focus',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Capture plant leaves for disease detection',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );

@@ -12,18 +12,67 @@ class _HelpPageState extends State<HelpPage> {
   // Example FAQs with categories
   final List<Map<String, dynamic>> _faqs = [
     {
-      'category': 'Account',
-      'icon': Icons.person,
+      'category': 'Devices',
+      'icon': Icons.devices,
       'color': Colors.blue,
-      'question': 'How do I update my profile?',
-      'answer': 'Go to the drawer menu from the home page, select "Profile", and update your information.'
+      'question': 'How do I add a new device?',
+      'answer': 'Tap the "Add Device" button on the home page, then scan the QR code or enter the device code manually using the toggle in the scanner.'
     },
     {
-      'category': 'Account',
-      'icon': Icons.email,
-      'color': Colors.blue,
-      'question': 'How do I change my email address?',
-      'answer': 'Navigate to Profile in the drawer menu. You can update your email there after verifying your current email.'
+      'category': 'Devices',
+      'icon': Icons.qr_code_scanner,
+      'color': Colors.green,
+      'question': 'How does device scanning work?',
+      'answer': 'Use the QR scanner to scan the device\'s QR code. If scanning fails, toggle to manual entry mode and type the device code directly.'
+    },
+    {
+      'category': 'Greenhouses',
+      'icon': Icons.local_florist,
+      'color': Colors.orange,
+      'question': 'How do I create a greenhouse?',
+      'answer': 'When adding a device, select "Create new greenhouse" from the assignment menu, or use the add button to create one first.'
+    },
+    {
+      'category': 'Greenhouses',
+      'icon': Icons.edit,
+      'color': Colors.purple,
+      'question': 'How do I rename or delete a greenhouse?',
+      'answer': 'In the greenhouse section, tap the edit icon to rename it. Tap the delete icon to remove it (devices will move to unassigned).'
+    },
+    {
+      'category': 'Greenhouses',
+      'icon': Icons.swap_horiz,
+      'color': Colors.teal,
+      'question': 'How do I assign devices to greenhouses?',
+      'answer': 'Tap the menu (three dots) on a device card and select "Reassign greenhouse" to move it to a different or new greenhouse.'
+    },
+    {
+      'category': 'Plants',
+      'icon': Icons.camera_alt,
+      'color': Colors.red,
+      'question': 'How do I scan plants?',
+      'answer': 'Tap the floating "Scan plants" button on the home page to open the camera. Position the plant within the guidelines and capture for identification.'
+    },
+    {
+      'category': 'Plants',
+      'icon': Icons.visibility,
+      'color': Colors.amber,
+      'question': 'What happens after scanning a plant?',
+      'answer': 'The app analyzes the image using AI to identify the plant species and provide care information. Results are displayed immediately.'
+    },
+    {
+      'category': 'Data',
+      'icon': Icons.bar_chart,
+      'color': Colors.indigo,
+      'question': 'How do I view device data?',
+      'answer': 'Tap on any device card from the home page to open its data dashboard, showing sensor readings, charts, and historical data.'
+    },
+    {
+      'category': 'Settings',
+      'icon': Icons.notifications,
+      'color': Colors.orange,
+      'question': 'How do I change my notification settings?',
+      'answer': 'Open Settings from the drawer menu to customize your notification preferences for alerts and updates.'
     },
     {
       'category': 'Security',
@@ -33,32 +82,11 @@ class _HelpPageState extends State<HelpPage> {
       'answer': 'Go to Profile from the drawer menu and enter a new password in the password field.'
     },
     {
-      'category': 'Settings',
-      'icon': Icons.notifications,
-      'color': Colors.orange,
-      'question': 'How do I change my notification settings?',
-      'answer': 'Open Settings from the drawer menu to customize your notification preferences.'
-    },
-    {
-      'category': 'Settings',
-      'icon': Icons.palette,
-      'color': Colors.purple,
-      'question': 'How do I change my theme?',
-      'answer': 'Go to Settings in the drawer menu and toggle between Light and Dark mode.'
-    },
-    {
       'category': 'Support',
       'icon': Icons.support_agent,
       'color': Colors.green,
       'question': 'How can I contact customer support?',
       'answer': 'Use the "Contact Support" button below to send us an email directly.'
-    },
-    {
-      'category': 'Account',
-      'icon': Icons.delete,
-      'color': Colors.red,
-      'question': 'How do I delete my account?',
-      'answer': 'Please contact customer support to request account deletion.'
     },
     {
       'category': 'Support',

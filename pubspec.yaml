@@ -35,8 +35,8 @@ dependencies:
   camera_android_camerax: ^0.6.10
   path_provider: ^2.1.5
   permission_handler: ^11.3.1
-  tflite_flutter: ^0.11.0
-  image: ^3.3.0
+  pytorch_lite: ^4.1.0
+  image: ^4.0.17
   firebase_core: ^3.8.0
   cloud_firestore: ^5.5.0
   firebase_auth: ^5.3.3
@@ -51,6 +51,7 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   rive: ^0.13.19
   flutter_email_sender: ^6.0.3
+  uuid: ^4.4.2
 
 
 
@@ -61,7 +62,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.11.0
+  flutter_launcher_icons: ^0.14.4
   flutter_lints: ^4.0.0
 
 flutter_icons:
@@ -83,7 +84,8 @@ flutter_icons:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
-    - lib/models/new_plants_disease_model_float32.tflite
+    - lib/models/mobile_plantnet_mobile_ready.pt
+    - lib/models/class_labels.txt
     - lib/models/
     - assets/
     - assets/images/
