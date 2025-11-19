@@ -46,23 +46,23 @@ class _AboutPageState extends State<AboutPage> {
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.eco, size: 80, color: Colors.white),
-                  SizedBox(height: 16),
+                  Icon(Icons.eco, size: 80, color: Theme.of(context).colorScheme.onPrimary),
+                  const SizedBox(height: 16),
                   Text(
                     'PlantCare IoT',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Smart Agriculture Monitoring',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -234,7 +234,7 @@ class _AboutPageState extends State<AboutPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).shadowColor.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

@@ -235,12 +235,12 @@ class AppWidgets {
       SnackBar(
         content: Row(
           children: [
-            Icon(icon, color: Colors.white),
+            Icon(icon, color: Theme.of(context).colorScheme.onPrimary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 message,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
               ),
             ),
           ],

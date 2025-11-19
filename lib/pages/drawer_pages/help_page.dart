@@ -134,14 +134,14 @@ class _HelpPageState extends State<HelpPage> {
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.help_outline, size: 60, color: Colors.white),
+                  Icon(Icons.help_outline, size: 60, color: Theme.of(context).colorScheme.onPrimary),
                   SizedBox(height: 12),
                   Text(
                     'How can we help you?',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
@@ -150,7 +150,7 @@ class _HelpPageState extends State<HelpPage> {
                   Text(
                     'Find answers to common questions below',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                       fontSize: 14,
                     ),
                     textAlign: TextAlign.center,
@@ -185,7 +185,7 @@ class _HelpPageState extends State<HelpPage> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Theme.of(context).shadowColor.withOpacity(0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -291,7 +291,7 @@ class _HelpPageState extends State<HelpPage> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   shadowColor: Colors.transparent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

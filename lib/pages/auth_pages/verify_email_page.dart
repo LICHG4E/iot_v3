@@ -90,10 +90,10 @@ class VerifyEmailPage extends StatelessWidget {
           FilledButton.icon(
             onPressed: controller.isVerificationLoading ? null : () => _resendEmail(context),
             icon: controller.isVerificationLoading
-                ? const SizedBox(
+                ? SizedBox(
                     height: 18,
                     width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary),
                   )
                 : const Icon(Icons.send_outlined),
             label: const Text('Resend verification email'),

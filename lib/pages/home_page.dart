@@ -814,10 +814,10 @@ class _HomePageState extends State<HomePage> {
                   color: Theme.of(context).primaryColor,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.add,
                   size: 32,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
               const SizedBox(height: 12),
@@ -859,7 +859,7 @@ class _HomePageState extends State<HomePage> {
           onPressed: () => Navigator.pushNamed(context, cameraScreen, arguments: widget.cameras),
           icon: const Icon(Icons.camera_alt),
           backgroundColor: Theme.of(context).primaryColor,
-          foregroundColor: Colors.white,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -880,7 +880,7 @@ class _HomePageState extends State<HomePage> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(100.0),
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
                 child: Stack(
                   children: [

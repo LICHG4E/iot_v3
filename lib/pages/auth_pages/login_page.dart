@@ -130,10 +130,10 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: isLoading ? null : _handleLogin,
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
               child: isLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 22,
                       width: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary),
                     )
                   : const Text('Login'),
             ),

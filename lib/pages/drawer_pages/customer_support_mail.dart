@@ -113,23 +113,23 @@ class _CustomerSupportMailState extends State<CustomerSupportMail> {
                   ),
                 ],
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.support_agent, size: 60, color: Colors.white),
-                  SizedBox(height: 12),
+                  Icon(Icons.support_agent, size: 60, color: Theme.of(context).colorScheme.onPrimary),
+                  const SizedBox(height: 12),
                   Text(
                     'We\'re Here to Help',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Send us your questions or feedback',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                       fontSize: 14,
                     ),
                   ),
@@ -146,7 +146,7 @@ class _CustomerSupportMailState extends State<CustomerSupportMail> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Theme.of(context).shadowColor.withOpacity(0.05),
                     blurRadius: 15,
                     offset: const Offset(0, 4),
                   ),
@@ -294,25 +294,25 @@ class _CustomerSupportMailState extends State<CustomerSupportMail> {
                           ),
                         ),
                         child: _isSending
-                            ? const SizedBox(
+                            ? SizedBox(
                                 height: 24,
                                 width: 24,
                                 child: CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
                                   strokeWidth: 2.5,
                                 ),
                               )
-                            : const Row(
+                            : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.send, color: Colors.white),
+                                  Icon(Icons.send, color: Theme.of(context).colorScheme.onPrimary),
                                   SizedBox(width: 8),
                                   Text(
                                     'Send Email',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onPrimary,
                                     ),
                                   ),
                                 ],

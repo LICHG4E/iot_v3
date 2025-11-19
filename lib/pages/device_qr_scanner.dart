@@ -58,7 +58,7 @@ class _DeviceQrScannerState extends State<DeviceQrScanner> with SingleTickerProv
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Scan Device QR Code'),
         centerTitle: true,
@@ -232,16 +232,16 @@ class _DeviceQrScannerState extends State<DeviceQrScanner> with SingleTickerProv
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.qr_code_scanner,
-                      color: Colors.white,
+                      color: theme.colorScheme.onPrimary,
                       size: 48,
                     ),
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Position QR code within the frame',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -251,7 +251,7 @@ class _DeviceQrScannerState extends State<DeviceQrScanner> with SingleTickerProv
                     Text(
                       'The scanner will automatically detect the code',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: theme.colorScheme.onPrimary.withOpacity(0.9),
                         fontSize: 14,
                       ),
                       textAlign: TextAlign.center,
@@ -336,7 +336,7 @@ class _DeviceQrScannerState extends State<DeviceQrScanner> with SingleTickerProv
                           onPressed: _handleManualSubmit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.primaryColor,
-                            foregroundColor: Colors.white,
+                            foregroundColor: theme.colorScheme.onPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
@@ -361,7 +361,7 @@ class _DeviceQrScannerState extends State<DeviceQrScanner> with SingleTickerProv
           // Loading overlay
           if (isScanComplete)
             Container(
-              color: Colors.black.withOpacity(0.7),
+              color: theme.scaffoldBackgroundColor.withOpacity(0.7),
               child: Center(
                 child: Container(
                   padding: const EdgeInsets.all(32),

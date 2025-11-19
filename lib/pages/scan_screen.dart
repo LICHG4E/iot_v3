@@ -398,7 +398,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Theme.of(context).shadowColor.withOpacity(0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -432,14 +432,14 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                               children: [
                                 Icon(
                                   isHealthy ? Icons.check_circle : Icons.warning,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                   size: 20,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   isHealthy ? 'Healthy' : 'Disease Detected',
-                                  style: const TextStyle(
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
                                   ),
@@ -494,7 +494,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                               onPressed: _runScan,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: theme.primaryColor,
-                                foregroundColor: Colors.white,
+                                foregroundColor: theme.colorScheme.onPrimary,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
@@ -551,7 +551,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                               ),
                               child: Icon(
                                 isHealthy ? Icons.local_florist : Icons.bug_report,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 size: 28,
                               ),
                             ),
@@ -585,7 +585,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: theme.cardColor,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -623,7 +623,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Theme.of(context).shadowColor.withOpacity(0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),

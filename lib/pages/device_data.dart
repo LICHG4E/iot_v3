@@ -127,13 +127,13 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(
                                   isFireDetected ? Icons.whatshot : Icons.fire_extinguisher,
                                   size: 32,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -141,10 +141,10 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
+                                    Text(
                                       'Fire Status',
                                       style: TextStyle(
-                                        color: Colors.white70,
+                                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
                                       ),
@@ -152,8 +152,8 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                                     const SizedBox(height: 4),
                                     Text(
                                       latestData?['fire_status'] ?? 'Unknown',
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onPrimary,
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -162,9 +162,9 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                                 ),
                               ),
                               if (isFireDetected)
-                                const Icon(
+                                Icon(
                                   Icons.warning,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                   size: 28,
                                 ),
                             ],
@@ -183,7 +183,7 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                             color: theme.cardColor,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Theme.of(context).shadowColor.withOpacity(0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               )
@@ -308,7 +308,7 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Theme.of(context).shadowColor.withOpacity(0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -545,7 +545,7 @@ class ModernDataCard extends StatelessWidget {
         border: isSelected ? null : Border.all(color: Colors.grey.shade300, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: isSelected ? gradient.colors.first.withOpacity(0.3) : Colors.black.withOpacity(0.05),
+            color: isSelected ? gradient.colors.first.withOpacity(0.3) : Theme.of(context).shadowColor.withOpacity(0.05),
             blurRadius: isSelected ? 12 : 8,
             offset: const Offset(0, 4),
           ),
@@ -559,13 +559,13 @@ class ModernDataCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withOpacity(0.2) : theme.primaryColor.withOpacity(0.1),
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.2) : theme.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
                 size: 32,
-                color: isSelected ? Colors.white : theme.primaryColor,
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : theme.primaryColor,
               ),
             ),
             const SizedBox(height: 12),
@@ -575,7 +575,7 @@ class ModernDataCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : Colors.grey.shade700,
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),
             const SizedBox(height: 6),
@@ -586,7 +586,7 @@ class ModernDataCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : theme.primaryColor,
+                  color: isSelected ? Theme.of(context).colorScheme.onPrimary : theme.primaryColor,
                 ),
               ),
             ),
