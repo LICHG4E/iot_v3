@@ -1,0 +1,132 @@
+{
+  "Apple___Apple_scab": [
+    "Remove and destroy infected leaves and fruit to reduce spore spread; prune trees for better air circulation.",
+    "Apply fungicides like captan or sulfur during the growing season, following label instructions for timing.",
+    "Choose resistant apple varieties such as Liberty or Enterprise for future plantings to prevent recurrence."
+  ],
+  "Apple___Black_rot": [
+    "Prune and remove all infected branches and mummified fruit to eliminate sources of infection.",
+    "Apply copper-based fungicides in early spring before bud break to protect new growth.",
+    "Improve tree vigor with balanced fertilization and ensure proper spacing to enhance airflow."
+  ],
+  "Apple___Cedar_apple_rust": [
+    "Remove nearby cedar or juniper hosts within a 500-foot radius to break the disease cycle.",
+    "Apply fungicides such as myclobutanil starting at the pink bud stage and repeat every 7-10 days.",
+    "Plant rust-resistant apple varieties like Liberty or GoldRush to minimize future outbreaks."
+  ],
+  "Cherry_(including_sour)___Powdery_mildew": [
+    "Prune trees to improve air circulation and sunlight penetration, removing any infected shoots.",
+    "Apply sulfur-based fungicides or potassium bicarbonate early in the season before symptoms appear.",
+    "Avoid overhead watering to keep foliage dry and reduce humidity around the tree."
+  ],
+  "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": [
+    "Rotate crops with non-host plants like soybeans for at least two years to break the disease cycle.",
+    "Apply foliar fungicides containing azoxystrobin when symptoms first appear, especially in humid conditions.",
+    "Plant resistant corn hybrids and ensure adequate nitrogen fertilization to promote healthy growth."
+  ],
+  "Corn_(maize)___Common_rust_": [
+    "Destroy crop residues after harvest to reduce overwintering spores; rotate with non-grass crops.",
+    "Use resistant corn varieties and apply fungicides like triazoles if rust is detected early in the season.",
+    "Monitor fields closely during warm, moist weather and avoid dense planting to improve airflow."
+  ],
+  "Corn_(maize)___Northern_Leaf_Blight": [
+    "Plant resistant hybrids and rotate crops every 2-3 years with non-corn plants to limit pathogen buildup.",
+    "Apply fungicide sprays containing propiconazole when lesions are first observed, up to twice per season.",
+    "Remove and plow under infected residue to reduce inoculum for the next growing season."
+  ],
+  "Grape___Black_rot": [
+    "Prune vines annually to open the canopy for better air flow and spray coverage.",
+    "Apply protective fungicides like mancozeb starting at bud break and continue through fruit set.",
+    "Remove mummified berries and infected leaves from the vineyard to eliminate overwintering sources."
+  ],
+  "Grape___Esca_(Black_Measles)": [
+    "Delay pruning until late winter and use clean tools sterilized between cuts to prevent spread.",
+    "Remove severely infected vines and apply wound protectants like latex paint on fresh cuts.",
+    "Maintain vine vigor with balanced nutrition and avoid water stress to reduce symptom expression."
+  ],
+  "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": [
+    "Apply copper fungicides in spring before symptoms develop, especially after rain events.",
+    "Prune to improve canopy airflow and remove infected debris from the vineyard floor.",
+    "Use resistant grape varieties and monitor for early signs during wet, warm periods."
+  ],
+  "Orange___Haunglongbing_(Citrus_greening)": [
+    "Remove and destroy infected trees promptly to prevent spread by the Asian citrus psyllid vector.",
+    "Control psyllid populations with insecticides like imidacloprid and use reflective mulches in groves.",
+    "Plant disease-free nursery stock and implement quarantine measures for new introductions."
+  ],
+  "Peach___Bacterial_spot": [
+    "Apply copper-based bactericides during dormancy and after leaf emergence to suppress bacterial growth.",
+    "Prune trees to enhance airflow and avoid overhead irrigation to keep leaves dry.",
+    "Use resistant peach varieties and remove infected fruit and leaves to reduce inoculum."
+  ],
+  "Pepper,_bell___Bacterial_spot": [
+    "Use disease-free seeds and transplants; apply copper bactericides at first sign of symptoms.",
+    "Practice crop rotation with non-solanaceous plants for 2-3 years to reduce soil bacteria.",
+    "Avoid working with wet plants and ensure good spacing for air circulation to minimize spread."
+  ],
+  "Potato___Early_blight": [
+    "Apply fungicides like chlorothalonil starting when plants are 6-8 inches tall and repeat every 7-10 days.",
+    "Rotate crops with non-solanum plants and remove volunteer potatoes to break the cycle.",
+    "Mulch around plants to prevent spore splash from soil and harvest promptly to avoid late infection."
+  ],
+  "Potato___Late_blight": [
+    "Monitor weather for cool, moist conditions and apply protective fungicides like mancozeb preemptively.",
+    "Destroy cull piles and volunteer plants; use certified disease-free seed tubers.",
+    "Hill up soil around plants to bury lower leaves and improve drainage to reduce humidity."
+  ],
+  "Squash___Powdery_mildew": [
+    "Apply sulfur or potassium bicarbonate fungicides early in the morning when conditions are dry.",
+    "Choose resistant squash varieties and space plants adequately for good air circulation.",
+    "Avoid overhead watering and remove infected leaves promptly to limit spore dispersal."
+  ],
+  "Strawberry___Leaf_scorch": [
+    "Apply fungicides containing captan during periods of high humidity and leaf wetness.",
+    "Renovate beds after harvest by mowing and narrow rows to improve airflow.",
+    "Use certified disease-free plants and rotate strawberry beds every 3-4 years."
+  ],
+  "Tomato___Bacterial_spot": [
+    "Use copper-based bactericides and fixed copper sprays after rain or overhead irrigation.",
+    "Start with disease-free seeds and transplants; avoid working in fields when plants are wet.",
+    "Practice 2-3 year crop rotation and remove plant debris after harvest to reduce bacteria."
+  ],
+  "Tomato___Early_blight": [
+    "Apply multi-site fungicides like chlorothalonil weekly from early season through harvest.",
+    "Mulch soil to prevent spore splash and stake plants to keep foliage off the ground.",
+    "Rotate with non-host crops and use resistant tomato varieties like Mountain Magic."
+  ],
+  "Tomato___Late_blight": [
+    "Spray with protectant fungicides like mancozeb before rain and monitor for symptoms daily.",
+    "Space plants widely and prune lower leaves to promote quick drying after dew or rain.",
+    "Destroy infected plants immediately and avoid overhead watering to keep foliage dry."
+  ],
+  "Tomato___Leaf_Mold": [
+    "Improve greenhouse ventilation and spacing to reduce humidity around tomato plants.",
+    "Apply fungicides such as chlorothalonil or copper compounds when symptoms first appear.",
+    "Remove lower leaves and infected debris; use resistant varieties if available."
+  ],
+  "Tomato___Septoria_leaf_spot": [
+    "Apply fungicides like azoxystrobin starting at the first sign of spots, repeating every 7 days.",
+    "Mulch heavily to prevent soil splash and stake or cage plants to elevate foliage.",
+    "Rotate crops for 2-3 years and clean up all plant residue at season's end."
+  ],
+  "Tomato___Spider_mites Two-spotted_spider_mite": [
+    "Increase humidity with overhead misting and release predatory mites like Phytoseiulus persimilis.",
+    "Apply miticides such as abamectin when mites are detected, targeting the undersides of leaves.",
+    "Avoid excessive nitrogen fertilization, which promotes mite outbreaks, and monitor with a hand lens."
+  ],
+  "Tomato___Target_Spot": [
+    "Apply copper fungicides and rotate with non-solanaceous crops to manage soilborne pathogens.",
+    "Ensure good drainage and avoid overwatering; space plants to allow quick leaf drying.",
+    "Remove and destroy infected lower leaves to reduce spore production and spread."
+  ],
+  "Tomato___Tomato_Yellow_Leaf_Curl_Virus": [
+    "Control whitefly vectors with reflective mulches and insecticides like thiamethoxam.",
+    "Use virus-resistant tomato varieties such as Tyking or Solar Fire for planting.",
+    "Remove and destroy infected plants early to limit virus transmission within the field."
+  ],
+  "Tomato___Tomato_mosaic_virus": [
+    "Use virus-free seeds and transplants; disinfect tools and hands between plants with 10% bleach.",
+    "Remove infected plants immediately and rogue them from the field to prevent spread.",
+    "Control weeds that can host the virus and avoid smoking near plants due to tobacco mosaic relation."
+  ]
+}

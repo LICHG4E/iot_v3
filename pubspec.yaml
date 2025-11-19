@@ -35,7 +35,7 @@ dependencies:
   camera_android_camerax: ^0.6.10
   path_provider: ^2.1.5
   permission_handler: ^11.3.1
-  pytorch_lite: ^4.1.0
+  tflite_flutter: ^0.11.0
   image: ^4.0.17
   firebase_core: ^3.8.0
   cloud_firestore: ^5.5.0
@@ -84,9 +84,10 @@ flutter_icons:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
-    - lib/models/mobile_plantnet_mobile_ready.pt
-    - lib/models/class_labels.txt
-    - lib/models/
+    - assets/models/
+    - assets/models/plant_disease_model.tflite
+    - assets/models/class_labels.txt
+    - assets/models/advice.json
     - assets/
     - assets/images/
     - assets/animations/

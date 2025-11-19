@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iot_v3/widgets/app_widgets.dart';
-import 'package:pytorch_lite/pytorch_lite.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 
 class ScanScreen extends StatefulWidget {
@@ -20,11 +22,13 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
   double _confidence = 0.0;
   bool _isProcessing = false;
   bool _hasScanned = false;
-  late ClassificationModel _model;
+  Interpreter? _interpreter;
   late List<String> _labels;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _modelLoaded = false;
+  Map<String, List<String>> _adviceData = {};
+  List<String> _currentAdvice = [];
 
   @override
   void initState() {
@@ -48,41 +52,42 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
     print('[ScanScreen] 🗑️ DISPOSING ScanScreen');
     print('[ScanScreen] 📊 Final state: _modelLoaded=$_modelLoaded, _isProcessing=$_isProcessing, _hasScanned=$_hasScanned');
     _animationController.dispose();
+    _interpreter?.close();
     super.dispose();
   }
 
-  // Load the PyTorch model
+  // Load the TFLite model
   Future<void> loadModel() async {
-    print('[ScanScreen] 🔄 STARTING MODEL LOADING PROCESS');
-    print('[ScanScreen] 📊 Current state: _modelLoaded=${_modelLoaded}');
+    print('[ScanScreen] 🔄 STARTING TFLITE MODEL LOADING PROCESS');
+    print('[ScanScreen] 📊 Current state: _modelLoaded=$_modelLoaded');
     print('[ScanScreen] 🕐 Timestamp: ${DateTime.now()}');
 
     const expectedClasses = 38;
     print('[ScanScreen] 🎯 Expected classes: $expectedClasses');
 
     try {
-      print('[ScanScreen] 📁 STEP 1: Checking model file existence...');
-      final modelPath = 'lib/models/mobile_plantnet_mobile_ready.pt';
-      final labelPath = 'lib/models/class_labels.txt';
-      print('[ScanScreen] 📂 Model path: $modelPath (MobilePlantNet Mobile-Ready)');
+      print('[ScanScreen] 📁 STEP 1: Loading TFLite model...');
+      const modelPath = 'assets/models/plant_disease_model.tflite';
+      const labelPath = 'assets/models/class_labels.txt';
+      print('[ScanScreen] 📂 Model path: $modelPath');
       print('[ScanScreen] 📂 Labels path: $labelPath');
-      print('[ScanScreen] 🎯 This model has BUILT-IN preprocessing - no manual normalization needed!');
+      print('[ScanScreen] 🎯 TFLite model with 256x256 input, 38 classes output');
 
-      print('[ScanScreen] 🔍 Checking model file...');
-      try {
-        final modelData = await rootBundle.load(modelPath);
-        print('[ScanScreen] ✅ Model file found: ${modelData.lengthInBytes} bytes');
-        print('[ScanScreen] 📏 Model file size: ${(modelData.lengthInBytes / 1024 / 1024).toStringAsFixed(2)} MB');
-      } catch (e) {
-        print('[ScanScreen] ❌ Model file not found at $modelPath: $e');
-        print('[ScanScreen] 🔍 Checking if file exists in assets...');
-        try {
-          final assetManifest = await rootBundle.loadString('AssetManifest.json');
-          print('[ScanScreen] 📋 Asset manifest contains: ${assetManifest.contains(modelPath)}');
-        } catch (e2) {
-          print('[ScanScreen] ❌ Could not check asset manifest: $e2');
-        }
-        throw Exception('Model file not found: $modelPath');
+      // Load TFLite model
+      _interpreter = await Interpreter.fromAsset(modelPath);
+      print('[ScanScreen] ✅ TFLite interpreter loaded successfully');
+
+      // Get input/output tensor info
+      final inputTensors = _interpreter!.getInputTensors();
+      final outputTensors = _interpreter!.getOutputTensors();
+
+      print('[ScanScreen] 📊 Input tensor info:');
+      for (var tensor in inputTensors) {
+        print('[ScanScreen]   Shape: ${tensor.shape}, Type: ${tensor.type}');
+      }
+      print('[ScanScreen] 📊 Output tensor info:');
+      for (var tensor in outputTensors) {
+        print('[ScanScreen]   Shape: ${tensor.shape}, Type: ${tensor.type}');
       }
 
       print('[ScanScreen] 🏷️ STEP 2: Loading class labels...');
@@ -90,131 +95,58 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
       try {
         labelsData = await rootBundle.loadString(labelPath);
         print('[ScanScreen] ✅ Labels file loaded: ${labelsData.length} characters');
-        print('[ScanScreen] 📝 Raw labels data (first 200 chars): ${labelsData.substring(0, labelsData.length > 200 ? 200 : labelsData.length)}');
-        print('[ScanScreen] 📝 Raw labels data (last 200 chars): ${labelsData.substring(labelsData.length > 200 ? labelsData.length - 200 : 0)}');
       } catch (e) {
         print('[ScanScreen] ❌ Failed to load labels file: $e');
         throw Exception('Labels file not found or corrupted: $labelPath');
       }
 
       print('[ScanScreen] 🔍 STEP 3: Parsing labels...');
-      // Labels format: "0: Apple___Apple_scab" - extract just the class name
       _labels = labelsData.split('\n').where((label) => label.isNotEmpty).map((label) => label.contains(':') ? label.split(': ').last.trim() : label.trim()).toList();
+
       print('[ScanScreen] ✅ Parsed ${_labels.length} class labels');
       print('[ScanScreen] 🏷️ First 5 labels: ${_labels.take(5).join(", ")}');
       print('[ScanScreen] 🏷️ Last 5 labels: ${_labels.skip(_labels.length > 5 ? _labels.length - 5 : 0).join(", ")}');
 
-      if (_labels.isEmpty) {
-        print('[ScanScreen] ❌ CRITICAL: No valid labels found after parsing');
-        throw Exception('No valid labels found in file');
-      }
-
-      print('[ScanScreen] 🔍 STEP 4: Validating label count...');
       if (_labels.length != expectedClasses) {
         print('[ScanScreen] ⚠️ WARNING: Expected $expectedClasses classes, but found ${_labels.length}');
-        print('[ScanScreen] 📋 All labels (${_labels.length}):');
-        for (int i = 0; i < _labels.length; i++) {
-          print('[ScanScreen]   ${i.toString().padLeft(2)}: ${_labels[i]}');
-        }
-      } else {
-        print('[ScanScreen] ✅ Label count matches expected: ${_labels.length} classes');
       }
 
-      print('[ScanScreen] 🤖 STEP 5: Loading PyTorch classification model...');
-      print('[ScanScreen] 📊 Model config: $expectedClasses classes, 256x256 input');
-      print('[ScanScreen] 🔧 Model type: ClassificationModel (not ObjectDetectionModel)');
-
+      print('[ScanScreen] 💡 STEP 4: Loading treatment advice...');
       try {
-        _model = await PytorchLite.loadClassificationModel(
-          modelPath,
-          expectedClasses,
-          256, // Image width
-          256, // Image height
-        );
-        print('[ScanScreen] ✅ PyTorch classification model loaded successfully');
-        print('[ScanScreen] 🎯 Model expects input: [1, 3, 256, 256]');
-        print('[ScanScreen] 📤 Model outputs: class index (0-${expectedClasses - 1})');
-      } catch (modelError) {
-        print('[ScanScreen] ❌ Failed to load PyTorch model: $modelError');
-        print('[ScanScreen] 🔍 Model loading error type: ${modelError.runtimeType}');
-        throw modelError;
+        final adviceString = await rootBundle.loadString('assets/models/advice.json');
+        final Map<String, dynamic> adviceJson = json.decode(adviceString);
+        _adviceData = adviceJson.map((key, value) => MapEntry(key, List<String>.from(value)));
+        print('[ScanScreen] ✅ Loaded advice for ${_adviceData.length} diseases');
+      } catch (e) {
+        print('[ScanScreen] ⚠️ Failed to load advice: $e');
+        // Continue without advice - it's not critical
       }
-
-      print('[ScanScreen] 🔍 STEP 6: Verifying model...');
-      print('[ScanScreen] ✅ Model object created successfully');
-      print('[ScanScreen] 🔧 Model runtime type: ${_model.runtimeType}');
 
       setState(() {
         _modelLoaded = true;
       });
 
-      print('[ScanScreen] 🎉 MODEL INITIALIZATION COMPLETE!');
+      print('[ScanScreen] 🎉 TFLITE MODEL INITIALIZATION COMPLETE!');
       print('[ScanScreen] 📈 Ready for inference with ${_labels.length} classes');
-      print('[ScanScreen] 🔧 Model type: MobilePlantNet Mobile-Ready v1.0');
-      print('[ScanScreen] 📊 Input: 256x256 RGB images (auto-resized by pytorch_lite)');
-      print('[ScanScreen] 🎯 Output: Probability array [38] summing to 1.0');
-      print('[ScanScreen] ✨ BUILT-IN: ImageNet normalization + Softmax');
-      print('[ScanScreen] 🏷️ Label mapping example:');
-      print('[ScanScreen]   Index 0 → ${_labels[0]}');
-      print('[ScanScreen]   Index ${_labels.length - 1} → ${_labels[_labels.length - 1]}');
-      print('[ScanScreen] ✅ True drag-and-drop model - no preprocessing needed!');
+      print('[ScanScreen] 🔧 Model: PlantNet TFLite (Converted from PyTorch)');
+      print('[ScanScreen] 📊 Input: [1, 3, 256, 256] (NCHW format)');
+      print('[ScanScreen] 🎯 Output: Probability array [1, 38]');
     } catch (e, stackTrace) {
       print('[ScanScreen] ❌ CRITICAL ERROR loading model: $e');
       print('[ScanScreen] 🔍 Error type: ${e.runtimeType}');
-      print('[ScanScreen] 📋 Full stack trace:');
-      print('[ScanScreen] $stackTrace');
+      print('[ScanScreen] 📋 Stack trace: $stackTrace');
 
-      // Provide specific error guidance
-      if (e.toString().contains('file not found') || e.toString().contains('AssetManifest')) {
-        print('[ScanScreen] 💡 SOLUTION: Model file not found!');
-        print('[ScanScreen] 🔍 Check these locations:');
-        print('[ScanScreen]   1. lib/models/mobile_plantnet_scripted_cpu.pt exists');
-        print('[ScanScreen]   2. File is included in pubspec.yaml assets');
-        print('[ScanScreen]   3. File is not corrupted (try re-uploading)');
-      } else if (e.toString().contains('labels') || e.toString().contains('class_labels')) {
-        print('[ScanScreen] 💡 SOLUTION: Labels file issue!');
-        print('[ScanScreen] 📝 class_labels.txt should contain one class name per line');
-        print('[ScanScreen] 🎯 Should have exactly 38 lines for this model');
-      } else if (e.toString().contains('CUDA') || e.toString().contains('cuda')) {
-        print('[ScanScreen] 💡 SOLUTION: Model was trained with CUDA (GPU)!');
-        print('[ScanScreen] 📋 Convert to CPU-only model:');
-        print('[ScanScreen]   1. model = torch.load("your_model.pth")');
-        print('[ScanScreen]   2. model = model.cpu()');
-        print('[ScanScreen]   3. model.eval()');
-        print('[ScanScreen]   4. dummy = torch.randn(1, 3, 224, 224)');
-        print('[ScanScreen]   5. traced = torch.jit.trace(model, dummy)');
-        print('[ScanScreen]   6. traced.save("mobile_plantnet_scripted_cpu.pt")');
-        print('[ScanScreen]   ⚠️ MUST be done on CPU, not GPU!');
-      } else if (e.toString().contains('Tuple') || e.toString().contains('Tensor')) {
-        print('[ScanScreen] 💡 SOLUTION: Model format mismatch!');
-        print('[ScanScreen] 📊 Your model returns Tensor (classification) but code expects Tuple (detection)');
-        print('[ScanScreen] ✅ This is NORMAL for plant disease models');
-        print('[ScanScreen] 🔧 Code has been fixed to handle classification');
-      } else if (e.toString().contains('PyTorch') || e.toString().contains('pytorch')) {
-        print('[ScanScreen] 💡 SOLUTION: PyTorch model issue!');
-        print('[ScanScreen] 📏 Check input dimensions: should be 224x224');
-        print('[ScanScreen] 🎯 Check output classes: should be 38');
-        print('[ScanScreen] 🔄 Ensure proper TorchScript export');
-      } else {
-        print('[ScanScreen] 💡 SOLUTION: General troubleshooting!');
-        print('[ScanScreen] 📱 Try: Clear app data, restart device, reinstall app');
-        print('[ScanScreen] 🔧 Check: Device storage space, Android version');
-      }
-
-      // Show user-friendly error
       if (mounted) {
-        print('[ScanScreen] 📢 Showing error snackbar to user');
         AppWidgets.showSnackBar(
           context: context,
-          message: 'Failed to load AI model. Check debug console for details.',
+          message: 'Failed to load AI model: ${e.toString()}',
           type: SnackBarType.error,
         );
-      } else {
-        print('[ScanScreen] ⚠️ Cannot show snackbar - widget not mounted');
       }
     }
-  } // Helper function to get readable label
+  }
 
+  // Helper function to get readable label
   String _getReadableLabel(String label) {
     final Map<String, String> readableLabels = {
       'Apple___Apple_scab': 'Apple - Apple Scab',
@@ -259,11 +191,49 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
     return readableLabels[label] ?? label;
   }
 
-// Fixed _runScan() method with correct preprocessing
-  Future<void> _runScan() async {
-    print('[ScanScreen] 🚀 STARTING PLANT SCAN PROCESS');
+  // Preprocess image for TFLite model
+  Float32List _preprocessImage(img.Image image) {
+    print('[ScanScreen] 🖼️ Preprocessing image...');
 
-    if (!_modelLoaded) {
+    // Resize to 256x256
+    final resized = img.copyResize(image, width: 256, height: 256);
+    print('[ScanScreen] ✅ Resized to 256x256');
+
+    // Convert to float32 list with NCHW format (channels first)
+    // Shape: [1, 3, 256, 256]
+    final input = Float32List(1 * 3 * 256 * 256);
+
+    const mean = [0.485, 0.456, 0.406];
+    const std = [0.229, 0.224, 0.225];
+
+    int pixelIndex = 0;
+    for (int y = 0; y < 256; y++) {
+      for (int x = 0; x < 256; x++) {
+        final pixel = resized.getPixel(x, y);
+
+        // Extract RGB values (0-255) and normalize
+        final r = pixel.r / 255.0;
+        final g = pixel.g / 255.0;
+        final b = pixel.b / 255.0;
+
+        // Apply ImageNet normalization in NCHW format (channels first)
+        input[pixelIndex] = (r - mean[0]) / std[0]; // R channel
+        input[pixelIndex + 256 * 256] = (g - mean[1]) / std[1]; // G channel
+        input[pixelIndex + 256 * 256 * 2] = (b - mean[2]) / std[2]; // B channel
+
+        pixelIndex++;
+      }
+    }
+
+    print('[ScanScreen] ✅ Normalized with ImageNet stats (NCHW format)');
+    return input;
+  }
+
+  // Run inference with TFLite
+  Future<void> _runScan() async {
+    print('[ScanScreen] 🚀 STARTING PLANT SCAN PROCESS (TFLite)');
+
+    if (!_modelLoaded || _interpreter == null) {
       print('[ScanScreen] ❌ SCAN CANCELLED: Model not loaded yet');
       AppWidgets.showSnackBar(
         context: context,
@@ -289,69 +259,71 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
 
       final imageBytes = await imageFile.readAsBytes();
       print('[ScanScreen] ✅ Image loaded: ${imageBytes.length} bytes');
-      print('[ScanScreen] 📏 Image size: ${(imageBytes.length / 1024).toStringAsFixed(2)} KB');
 
-      print('[ScanScreen] 🤖 STEP 2: Running PyTorch inference...');
-      print('[ScanScreen] ✨ Using mobile-ready model with BUILT-IN preprocessing!');
-      print('[ScanScreen] 📊 PyTorch Lite will automatically:');
-      print('[ScanScreen]   1. Resize image to 256x256');
-      print('[ScanScreen]   2. Convert to 0-1 range');
-      print('[ScanScreen]   3. Model applies ImageNet normalization internally');
-      print('[ScanScreen]   4. Model applies softmax for probabilities');
+      print('[ScanScreen] 🖼️ STEP 2: Decoding image...');
+      final decodedImage = img.decodeImage(imageBytes);
+      if (decodedImage == null) {
+        throw Exception('Failed to decode image');
+      }
+      print('[ScanScreen] ✅ Image decoded: ${decodedImage.width}x${decodedImage.height}');
 
-      // No manual preprocessing needed! The model has everything built-in
-      final result = await _model.getImagePredictionList(imageBytes);
+      print('[ScanScreen] 🔄 STEP 3: Preprocessing for TFLite...');
+      final input = _preprocessImage(decodedImage);
 
-      print('[ScanScreen] 📊 STEP 3: Processing prediction result...');
-      print('[ScanScreen] 📋 Raw result: $result');
+      print('[ScanScreen] 🤖 STEP 4: Running TFLite inference...');
+      final output = List.filled(38, 0.0).reshape([1, 38]);
 
-      int classIndex;
-      double confidence = 0.0;
+      _interpreter!.run(input.reshape([1, 3, 256, 256]), output);
 
-      if (result.isNotEmpty) {
-        print('[ScanScreen] ✅ Model returned probabilities array with ${result.length} elements');
+      print('[ScanScreen] 📊 STEP 5: Processing prediction result...');
+      final probabilities = output[0] as List<double>;
+      print('[ScanScreen] 📋 Output shape: ${probabilities.length} probabilities');
 
-        // Find max probability
-        double maxProb = 0.0;
-        int maxIndex = 0;
+      // Find max probability
+      double maxProb = 0.0;
+      int maxIndex = 0;
 
-        for (int i = 0; i < result.length; i++) {
-          final prob = result[i].toDouble();
-          if (prob > maxProb) {
-            maxProb = prob;
-            maxIndex = i;
-          }
+      for (int i = 0; i < probabilities.length; i++) {
+        if (probabilities[i] > maxProb) {
+          maxProb = probabilities[i];
+          maxIndex = i;
         }
-
-        classIndex = maxIndex;
-        confidence = (maxProb * 100).clamp(0.0, 100.0);
-
-        print('[ScanScreen] 🎯 Prediction: index=$classIndex, confidence=${confidence.toStringAsFixed(2)}%');
-
-        // Show top 5 predictions for debugging
-        print('[ScanScreen] 🏆 Top 5 predictions:');
-        final sortedIndices = List.generate(result.length, (i) => i)..sort((a, b) => result[b].compareTo(result[a]));
-
-        for (int i = 0; i < 5 && i < sortedIndices.length; i++) {
-          final idx = sortedIndices[i];
-          final prob = (result[idx] as num).toDouble() * 100;
-          final label = idx < _labels.length ? _labels[idx] : 'Unknown';
-          print('[ScanScreen]   ${i + 1}. $label: ${prob.toStringAsFixed(2)}%');
-        }
-      } else {
-        throw Exception('Model returned invalid result format');
       }
 
-      if (classIndex < 0 || classIndex >= _labels.length) {
-        throw Exception('Class index out of range: $classIndex (expected 0-${_labels.length - 1})');
+      final confidence = (maxProb * 100).clamp(0.0, 100.0);
+      print('[ScanScreen] 🎯 Prediction: index=$maxIndex, confidence=${confidence.toStringAsFixed(2)}%');
+
+      // Show top 5 predictions for debugging
+      print('[ScanScreen] 🏆 Top 5 predictions:');
+      final sortedIndices = List.generate(probabilities.length, (i) => i)..sort((a, b) => probabilities[b].compareTo(probabilities[a]));
+
+      for (int i = 0; i < 5 && i < sortedIndices.length; i++) {
+        final idx = sortedIndices[i];
+        final prob = probabilities[idx] * 100;
+        final label = idx < _labels.length ? _labels[idx] : 'Unknown';
+        print('[ScanScreen]   ${i + 1}. $label: ${prob.toStringAsFixed(2)}%');
       }
 
-      final rawLabel = _labels[classIndex];
+      if (maxIndex < 0 || maxIndex >= _labels.length) {
+        throw Exception('Class index out of range: $maxIndex (expected 0-${_labels.length - 1})');
+      }
+
+      final rawLabel = _labels[maxIndex];
       final readableLabel = _getReadableLabel(rawLabel);
+
+      // Get advice for the detected disease
+      List<String> advice = [];
+      if (_adviceData.containsKey(rawLabel)) {
+        advice = _adviceData[rawLabel]!;
+        print('[ScanScreen] 💡 Found ${advice.length} treatment recommendations');
+      } else {
+        print('[ScanScreen] ⚠️ No advice found for: $rawLabel');
+      }
 
       setState(() {
         _predictedLabel = readableLabel;
         _confidence = confidence;
+        _currentAdvice = advice;
         _isProcessing = false;
         _hasScanned = true;
       });
@@ -388,14 +360,11 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     print('[ScanScreen] 🎨 BUILDING UI');
     print('[ScanScreen] 📊 Build state: _modelLoaded=$_modelLoaded, _isProcessing=$_isProcessing, _hasScanned=$_hasScanned');
-    print('[ScanScreen] 🏷️ Current prediction: "$_predictedLabel"');
-    print('[ScanScreen] 📊 Current confidence: $_confidence%');
 
     final imageFile = File(widget.imagePath);
     final size = MediaQuery.of(context).size;
     final theme = Theme.of(context);
     final isHealthy = _predictedLabel.toLowerCase().contains('healthy');
-    print('[ScanScreen] 🎯 Health status: ${isHealthy ? "HEALTHY" : "DISEASED"}');
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -407,7 +376,6 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
             IconButton(
               icon: const Icon(Icons.share),
               onPressed: () {
-                // Share functionality could be added here
                 AppWidgets.showSnackBar(
                   context: context,
                   message: 'Share feature coming soon!',
@@ -593,17 +561,19 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Detection Result',
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      color: Colors.grey.shade700,
+                                    'Diagnosis',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     _predictedLabel,
-                                    style: theme.textTheme.titleLarge?.copyWith(
+                                    style: const TextStyle(
+                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: isHealthy ? Colors.green.shade900 : Colors.orange.shade900,
                                     ),
                                   ),
                                 ],
@@ -675,20 +645,22 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                           ],
                         ),
                         const SizedBox(height: 16),
-                        _buildRecommendation(
-                          icon: Icons.water_drop,
-                          text: isHealthy ? 'Continue regular watering schedule' : 'Adjust watering - avoid overwatering',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildRecommendation(
-                          icon: Icons.wb_sunny,
-                          text: 'Ensure adequate sunlight exposure',
-                        ),
-                        const SizedBox(height: 12),
-                        _buildRecommendation(
-                          icon: Icons.eco,
-                          text: isHealthy ? 'Plant appears healthy - maintain current care' : 'Consider consulting a plant expert for treatment',
-                        ),
+                        if (isHealthy) ...[
+                          _buildRecommendation(
+                            icon: Icons.check_circle,
+                            text: 'Your plant appears to be healthy! Continue with regular care and maintenance.',
+                          ),
+                        ] else if (_currentAdvice.isNotEmpty) ...[
+                          ..._currentAdvice.map((advice) => _buildRecommendation(
+                                icon: Icons.healing,
+                                text: advice,
+                              )),
+                        ] else ...[
+                          _buildRecommendation(
+                            icon: Icons.warning,
+                            text: 'Disease detected but no specific treatment advice available. Consult a plant specialist.',
+                          ),
+                        ],
                       ],
                     ),
                   ),
