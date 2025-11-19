@@ -20,7 +20,7 @@ class DeviceDataPage extends StatefulWidget {
 
 class _DeviceDataPageState extends State<DeviceDataPage> {
   late List<Map<String, dynamic>> deviceData;
-  Map<String, dynamic>? latestData = null;
+  Map<String, dynamic>? latestData;
   bool isLoading = true;
   String currentChart = 'humidity_percent';
   String currentChartTitle = 'Humidity';
@@ -141,9 +141,9 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
+                                    const Text(
                                       'Fire Status',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         color: Colors.white70,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -162,7 +162,7 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
                                 ),
                               ),
                               if (isFireDetected)
-                                Icon(
+                                const Icon(
                                   Icons.warning,
                                   color: Colors.white,
                                   size: 28,
@@ -524,13 +524,13 @@ class ModernDataCard extends StatelessWidget {
   final Gradient gradient;
 
   const ModernDataCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.icon,
     this.isSelected = false,
     required this.gradient,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

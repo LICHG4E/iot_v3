@@ -33,6 +33,7 @@ class _HomePageState extends State<HomePage> {
   List<Greenhouse> _greenhouses = [];
   bool isLoading = true;
   final Uuid _uuid = const Uuid();
+  final AlertMonitoringService _alertService = AlertMonitoringService();
   static const String _createGreenhouseOption = '__create_greenhouse__';
 
   @override
@@ -179,7 +180,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> logout() async {
-    NotificationTask.stopService();
+    _alertService.stop();
     await FirebaseAuth.instance.signOut();
   }
 
@@ -455,6 +456,7 @@ class _HomePageState extends State<HomePage> {
                   return;
                 }
                 final newId = await _createGreenhouse(name);
+                if (!dialogContext.mounted) return;
                 Navigator.pop(dialogContext, shouldReturnId ? newId : null);
               },
               child: const Text('Create'),
@@ -548,9 +550,8 @@ class _HomePageState extends State<HomePage> {
                   return;
                 }
                 await _renameGreenhouse(greenhouse, trimmed);
-                if (mounted) {
-                  Navigator.pop(dialogContext);
-                }
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
               },
               child: const Text('Save'),
             ),
@@ -958,15 +959,16 @@ class _HomePageState extends State<HomePage> {
                           isDangerous: true,
                         );
 
+                        if (!context.mounted) return;
+
                         if (confirmLogout) {
                           await logout();
-                          if (mounted) {
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              loginPage,
-                              (route) => false,
-                            );
-                          }
+                          if (!context.mounted) return;
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            loginPage,
+                            (route) => false,
+                          );
                         }
                       },
                     ),
@@ -1082,7 +1084,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ] else ...[
                     _buildUnassignedSection(_unassignedDevices, crossAxisCount),
-                    ..._greenhouses.map((greenhouse) => _buildGreenhouseSection(greenhouse, crossAxisCount)).toList(),
+                    ..._greenhouses.map((greenhouse) => _buildGreenhouseSection(greenhouse, crossAxisCount)),
                   ],
                   const SizedBox(height: 8),
                   SizedBox(

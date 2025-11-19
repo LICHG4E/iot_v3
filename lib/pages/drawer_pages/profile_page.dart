@@ -19,6 +19,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final _formKey = GlobalKey<FormState>();
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
+  bool _isVerificationButtonEnabled = true;
 
   @override
   void initState() {
@@ -97,7 +98,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
     final user = userProvider.user;
-    bool isButtonEnabled = true;
 
     return Scaffold(
       appBar: AppBar(
@@ -240,9 +240,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                           const SizedBox(height: 12),
                           ElevatedButton.icon(
-                            onPressed: isButtonEnabled
+                            onPressed: _isVerificationButtonEnabled
                                 ? () async {
-                                    setState(() => isButtonEnabled = false);
+                                    setState(() => _isVerificationButtonEnabled = false);
                                     try {
                                       await user!.sendEmailVerification();
                                       if (context.mounted) {
@@ -271,7 +271,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                       }
                                     } finally {
                                       Future.delayed(const Duration(seconds: 30), () {
-                                        if (mounted) setState(() => isButtonEnabled = true);
+                                        if (mounted) {
+                                          setState(() => _isVerificationButtonEnabled = true);
+                                        }
                                       });
                                     }
                                   }

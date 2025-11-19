@@ -96,9 +96,10 @@ class _DeviceQrScannerState extends State<DeviceQrScanner> with SingleTickerProv
                     type: SnackBarType.success,
                   );
 
+                  final navigator = Navigator.of(context);
                   Future.delayed(const Duration(milliseconds: 500), () {
                     if (mounted) {
-                      Navigator.pop(context, barcode.rawValue);
+                      navigator.pop(barcode.rawValue);
                     }
                   });
                 }
@@ -231,7 +232,7 @@ class _DeviceQrScannerState extends State<DeviceQrScanner> with SingleTickerProv
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.qr_code_scanner,
                       color: Colors.white,
                       size: 48,

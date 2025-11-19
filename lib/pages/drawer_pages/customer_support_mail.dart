@@ -49,26 +49,29 @@ class _CustomerSupportMailState extends State<CustomerSupportMail> {
       );
       await FlutterEmailSender.send(email);
 
+      if (!mounted) return;
+
       // Show success message.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email sent successfully!')),
       );
 
-      if (mounted) {
-        FocusScope.of(context).unfocus();
-      }
-
+      FocusScope.of(context).unfocus();
       _subjectController.clear();
       _bodyController.clear();
     } catch (e) {
       // Handle errors (e.g., failed email sending).
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send email: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send email: $e')),
+        );
+      }
     } finally {
-      setState(() {
-        _isSending = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     }
   }
 

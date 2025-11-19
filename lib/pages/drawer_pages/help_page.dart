@@ -258,7 +258,7 @@ class _HelpPageState extends State<HelpPage> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
 
             const SizedBox(height: 24),
 

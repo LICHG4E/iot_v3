@@ -64,6 +64,8 @@ class TestFirestore extends StatelessWidget {
 
             debugPrint(comparisonResult);
 
+            if (!context.mounted) return;
+
             // Show comparison results in a dialog
             showDialog(
               context: context,

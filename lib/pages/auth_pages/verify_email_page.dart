@@ -47,12 +47,9 @@ class VerifyEmailPage extends StatelessWidget {
     final theme = Theme.of(context);
 
     return AuthPageTemplate(
-      illustration: SizedBox(
+      illustration: const SizedBox(
         height: 200,
-        child: RiveAnimation.asset(
-          AppConstants.mailAnimationPath,
-          fit: BoxFit.contain,
-        ),
+        child: _VerifyEmailIllustration(),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -115,6 +112,18 @@ class VerifyEmailPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _VerifyEmailIllustration extends StatelessWidget {
+  const _VerifyEmailIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return const RiveAnimation.asset(
+      AppConstants.mailAnimationPath,
+      fit: BoxFit.contain,
     );
   }
 }

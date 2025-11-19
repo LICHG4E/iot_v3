@@ -56,13 +56,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
     return AuthPageTemplate(
       showBackButton: true,
-      illustration: Hero(
-        tag: 'app_logo',
-        child: const SizedBox(
-          height: 180,
-          child: RiveAnimation.asset(AppConstants.plantAnimationPath),
-        ),
-      ),
+      illustration: const _RegisterHeroIllustration(),
       child: Form(
         key: _formKey,
         child: Column(
@@ -179,5 +173,29 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
     );
+  }
+}
+
+class _RegisterHeroIllustration extends StatelessWidget {
+  const _RegisterHeroIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Hero(
+      tag: 'app_logo',
+      child: SizedBox(
+        height: 180,
+        child: _RegisterLogoAnimation(),
+      ),
+    );
+  }
+}
+
+class _RegisterLogoAnimation extends StatelessWidget {
+  const _RegisterLogoAnimation();
+
+  @override
+  Widget build(BuildContext context) {
+    return const RiveAnimation.asset(AppConstants.plantAnimationPath);
   }
 }

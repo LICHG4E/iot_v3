@@ -21,14 +21,15 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
+  final AlertMonitoringService _alertService = AlertMonitoringService();
   String? _activeUserId;
   User? _queuedUser;
 
   @override
   void initState() {
-    WidgetsFlutterBinding.ensureInitialized();
-    NotificationTask.initializeService();
     super.initState();
+    WidgetsFlutterBinding.ensureInitialized();
+    _alertService.initialize();
   }
 
   void loadSettings(String uid) {
@@ -42,7 +43,7 @@ class _MainPageState extends State<MainPage> {
       if (!mounted) return;
       Provider.of<UserProvider>(context, listen: false).setUser(user);
       loadSettings(user.uid);
-      NotificationTask.startService(user.uid);
+      _alertService.start(user.uid);
     });
   }
 

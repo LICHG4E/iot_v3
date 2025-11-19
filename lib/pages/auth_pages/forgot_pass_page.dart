@@ -51,12 +51,9 @@ class _ForgotPassPageState extends State<ForgotPassPage> {
 
     return AuthPageTemplate(
       showBackButton: true,
-      illustration: SizedBox(
+      illustration: const SizedBox(
         height: 200,
-        child: RiveAnimation.asset(
-          AppConstants.mailAnimationPath,
-          fit: BoxFit.contain,
-        ),
+        child: _ForgotPasswordIllustration(),
       ),
       child: Form(
         key: _formKey,
@@ -109,6 +106,18 @@ class _ForgotPassPageState extends State<ForgotPassPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ForgotPasswordIllustration extends StatelessWidget {
+  const _ForgotPasswordIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return const RiveAnimation.asset(
+      AppConstants.mailAnimationPath,
+      fit: BoxFit.contain,
     );
   }
 }
