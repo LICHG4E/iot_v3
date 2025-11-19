@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 /// Manages background monitoring and notifications for device sensor thresholds
 ///
@@ -435,15 +436,15 @@ class AlertMonitoringService {
 
   // Logging utilities
   static void _logInfo(String message) {
-    print('[AlertService] ℹ️ $message');
+    debugPrint('[AlertService] ℹ️ $message');
   }
 
   static void _logWarning(String message) {
-    print('[AlertService] ⚠️ $message');
+    debugPrint('[AlertService] ⚠️ $message');
   }
 
   static void _logError(String message) {
-    print('[AlertService] ❌ $message');
+    debugPrint('[AlertService] ❌ $message');
   }
 }
 

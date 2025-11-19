@@ -64,7 +64,7 @@ class SettingsProvider extends ChangeNotifier {
   void setPushNotifications(bool value) {
     pushNotifications = value;
     _saveSettingsToPreferences();
-    print("set pushNotifications in settings provider : $value");
+    debugPrint("set pushNotifications in settings provider : $value");
     notifyListeners();
   }
 
@@ -160,7 +160,7 @@ class SettingsProvider extends ChangeNotifier {
   // Load settings from SharedPreferences
   Future<void> _loadSettingsFromPreferences() async {
     final prefs = await SharedPreferences.getInstance();
-    print("load settings : ${prefs.getBool('${userId}_pushNotifications')}");
+    debugPrint("load settings : ${prefs.getBool('${userId}_pushNotifications')}");
     pushNotifications = prefs.getBool('${userId}_pushNotifications') ?? true;
     pushFireNotifications = prefs.getBool('${userId}_pushFireNotifications') ?? true;
     chartUpdateInterval = prefs.getInt('${userId}_chartUpdateInterval') ?? 1;

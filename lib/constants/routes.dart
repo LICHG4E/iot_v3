@@ -12,3 +12,4 @@ const settingsPage = '/settings/';
 const helpPage = '/help/';
 const customerSupportPage = '/support/';
 const aboutPage = '/about/';
+const verifyEmailPage = '/verify-email/';

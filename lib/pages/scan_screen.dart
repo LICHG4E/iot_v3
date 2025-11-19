@@ -33,8 +33,8 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    print('[ScanScreen] 🚀 INITIALIZING ScanScreen');
-    print('[ScanScreen] 📸 Image path: ${widget.imagePath}');
+    debugPrint('[ScanScreen] 🚀 INITIALIZING ScanScreen');
+    debugPrint('[ScanScreen] 📸 Image path: ${widget.imagePath}');
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -43,14 +43,14 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
     _animationController.forward();
-    print('[ScanScreen] 🎬 Animation controller initialized');
+    debugPrint('[ScanScreen] 🎬 Animation controller initialized');
     loadModel();
   }
 
   @override
   void dispose() {
-    print('[ScanScreen] 🗑️ DISPOSING ScanScreen');
-    print('[ScanScreen] 📊 Final state: _modelLoaded=$_modelLoaded, _isProcessing=$_isProcessing, _hasScanned=$_hasScanned');
+    debugPrint('[ScanScreen] 🗑️ DISPOSING ScanScreen');
+    debugPrint('[ScanScreen] 📊 Final state: _modelLoaded=$_modelLoaded, _isProcessing=$_isProcessing, _hasScanned=$_hasScanned');
     _animationController.dispose();
     _interpreter?.close();
     super.dispose();
@@ -58,67 +58,67 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
 
   // Load the TFLite model
   Future<void> loadModel() async {
-    print('[ScanScreen] 🔄 STARTING TFLITE MODEL LOADING PROCESS');
-    print('[ScanScreen] 📊 Current state: _modelLoaded=$_modelLoaded');
-    print('[ScanScreen] 🕐 Timestamp: ${DateTime.now()}');
+    debugPrint('[ScanScreen] 🔄 STARTING TFLITE MODEL LOADING PROCESS');
+    debugPrint('[ScanScreen] 📊 Current state: _modelLoaded=$_modelLoaded');
+    debugPrint('[ScanScreen] 🕐 Timestamp: ${DateTime.now()}');
 
     const expectedClasses = 38;
-    print('[ScanScreen] 🎯 Expected classes: $expectedClasses');
+    debugPrint('[ScanScreen] 🎯 Expected classes: $expectedClasses');
 
     try {
-      print('[ScanScreen] 📁 STEP 1: Loading TFLite model...');
+      debugPrint('[ScanScreen] 📁 STEP 1: Loading TFLite model...');
       const modelPath = 'assets/models/plant_disease_model.tflite';
       const labelPath = 'assets/models/class_labels.txt';
-      print('[ScanScreen] 📂 Model path: $modelPath');
-      print('[ScanScreen] 📂 Labels path: $labelPath');
-      print('[ScanScreen] 🎯 TFLite model with 256x256 input, 38 classes output');
+      debugPrint('[ScanScreen] 📂 Model path: $modelPath');
+      debugPrint('[ScanScreen] 📂 Labels path: $labelPath');
+      debugPrint('[ScanScreen] 🎯 TFLite model with 256x256 input, 38 classes output');
 
       // Load TFLite model
       _interpreter = await Interpreter.fromAsset(modelPath);
-      print('[ScanScreen] ✅ TFLite interpreter loaded successfully');
+      debugPrint('[ScanScreen] ✅ TFLite interpreter loaded successfully');
 
       // Get input/output tensor info
       final inputTensors = _interpreter!.getInputTensors();
       final outputTensors = _interpreter!.getOutputTensors();
 
-      print('[ScanScreen] 📊 Input tensor info:');
+      debugPrint('[ScanScreen] 📊 Input tensor info:');
       for (var tensor in inputTensors) {
-        print('[ScanScreen]   Shape: ${tensor.shape}, Type: ${tensor.type}');
+        debugPrint('[ScanScreen]   Shape: ${tensor.shape}, Type: ${tensor.type}');
       }
-      print('[ScanScreen] 📊 Output tensor info:');
+      debugPrint('[ScanScreen] 📊 Output tensor info:');
       for (var tensor in outputTensors) {
-        print('[ScanScreen]   Shape: ${tensor.shape}, Type: ${tensor.type}');
+        debugPrint('[ScanScreen]   Shape: ${tensor.shape}, Type: ${tensor.type}');
       }
 
-      print('[ScanScreen] 🏷️ STEP 2: Loading class labels...');
+      debugPrint('[ScanScreen] 🏷️ STEP 2: Loading class labels...');
       String labelsData;
       try {
         labelsData = await rootBundle.loadString(labelPath);
-        print('[ScanScreen] ✅ Labels file loaded: ${labelsData.length} characters');
+        debugPrint('[ScanScreen] ✅ Labels file loaded: ${labelsData.length} characters');
       } catch (e) {
-        print('[ScanScreen] ❌ Failed to load labels file: $e');
+        debugPrint('[ScanScreen] ❌ Failed to load labels file: $e');
         throw Exception('Labels file not found or corrupted: $labelPath');
       }
 
-      print('[ScanScreen] 🔍 STEP 3: Parsing labels...');
+      debugPrint('[ScanScreen] 🔍 STEP 3: Parsing labels...');
       _labels = labelsData.split('\n').where((label) => label.isNotEmpty).map((label) => label.contains(':') ? label.split(': ').last.trim() : label.trim()).toList();
 
-      print('[ScanScreen] ✅ Parsed ${_labels.length} class labels');
-      print('[ScanScreen] 🏷️ First 5 labels: ${_labels.take(5).join(", ")}');
-      print('[ScanScreen] 🏷️ Last 5 labels: ${_labels.skip(_labels.length > 5 ? _labels.length - 5 : 0).join(", ")}');
+      debugPrint('[ScanScreen] ✅ Parsed ${_labels.length} class labels');
+      debugPrint('[ScanScreen] 🏷️ First 5 labels: ${_labels.take(5).join(", ")}');
+      debugPrint('[ScanScreen] 🏷️ Last 5 labels: ${_labels.skip(_labels.length > 5 ? _labels.length - 5 : 0).join(", ")}');
 
       if (_labels.length != expectedClasses) {
-        print('[ScanScreen] ⚠️ WARNING: Expected $expectedClasses classes, but found ${_labels.length}');
+        debugPrint('[ScanScreen] ⚠️ WARNING: Expected $expectedClasses classes, but found ${_labels.length}');
       }
 
-      print('[ScanScreen] 💡 STEP 4: Loading treatment advice...');
+      debugPrint('[ScanScreen] 💡 STEP 4: Loading treatment advice...');
       try {
         final adviceString = await rootBundle.loadString('assets/models/advice.json');
         final Map<String, dynamic> adviceJson = json.decode(adviceString);
         _adviceData = adviceJson.map((key, value) => MapEntry(key, List<String>.from(value)));
-        print('[ScanScreen] ✅ Loaded advice for ${_adviceData.length} diseases');
+        debugPrint('[ScanScreen] ✅ Loaded advice for ${_adviceData.length} diseases');
       } catch (e) {
-        print('[ScanScreen] ⚠️ Failed to load advice: $e');
+        debugPrint('[ScanScreen] ⚠️ Failed to load advice: $e');
         // Continue without advice - it's not critical
       }
 
@@ -126,15 +126,15 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
         _modelLoaded = true;
       });
 
-      print('[ScanScreen] 🎉 TFLITE MODEL INITIALIZATION COMPLETE!');
-      print('[ScanScreen] 📈 Ready for inference with ${_labels.length} classes');
-      print('[ScanScreen] 🔧 Model: PlantNet TFLite (Converted from PyTorch)');
-      print('[ScanScreen] 📊 Input: [1, 3, 256, 256] (NCHW format)');
-      print('[ScanScreen] 🎯 Output: Probability array [1, 38]');
+      debugPrint('[ScanScreen] 🎉 TFLITE MODEL INITIALIZATION COMPLETE!');
+      debugPrint('[ScanScreen] 📈 Ready for inference with ${_labels.length} classes');
+      debugPrint('[ScanScreen] 🔧 Model: PlantNet TFLite (Converted from PyTorch)');
+      debugPrint('[ScanScreen] 📊 Input: [1, 3, 256, 256] (NCHW format)');
+      debugPrint('[ScanScreen] 🎯 Output: Probability array [1, 38]');
     } catch (e, stackTrace) {
-      print('[ScanScreen] ❌ CRITICAL ERROR loading model: $e');
-      print('[ScanScreen] 🔍 Error type: ${e.runtimeType}');
-      print('[ScanScreen] 📋 Stack trace: $stackTrace');
+      debugPrint('[ScanScreen] ❌ CRITICAL ERROR loading model: $e');
+      debugPrint('[ScanScreen] 🔍 Error type: ${e.runtimeType}');
+      debugPrint('[ScanScreen] 📋 Stack trace: $stackTrace');
 
       if (mounted) {
         AppWidgets.showSnackBar(
@@ -193,11 +193,11 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
 
   // Preprocess image for TFLite model
   Float32List _preprocessImage(img.Image image) {
-    print('[ScanScreen] 🖼️ Preprocessing image...');
+    debugPrint('[ScanScreen] 🖼️ Preprocessing image...');
 
     // Resize to 256x256
     final resized = img.copyResize(image, width: 256, height: 256);
-    print('[ScanScreen] ✅ Resized to 256x256');
+    debugPrint('[ScanScreen] ✅ Resized to 256x256');
 
     // Convert to float32 list with NCHW format (channels first)
     // Shape: [1, 3, 256, 256]
@@ -225,16 +225,16 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
       }
     }
 
-    print('[ScanScreen] ✅ Normalized with ImageNet stats (NCHW format)');
+    debugPrint('[ScanScreen] ✅ Normalized with ImageNet stats (NCHW format)');
     return input;
   }
 
   // Run inference with TFLite
   Future<void> _runScan() async {
-    print('[ScanScreen] 🚀 STARTING PLANT SCAN PROCESS (TFLite)');
+    debugPrint('[ScanScreen] 🚀 STARTING PLANT SCAN PROCESS (TFLite)');
 
     if (!_modelLoaded || _interpreter == null) {
-      print('[ScanScreen] ❌ SCAN CANCELLED: Model not loaded yet');
+      debugPrint('[ScanScreen] ❌ SCAN CANCELLED: Model not loaded yet');
       AppWidgets.showSnackBar(
         context: context,
         message: 'Model not loaded yet. Please wait...',
@@ -249,7 +249,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
     });
 
     try {
-      print('[ScanScreen] 📁 STEP 1: Loading image file...');
+      debugPrint('[ScanScreen] 📁 STEP 1: Loading image file...');
       final imageFile = File(widget.imagePath);
       final imageExists = await imageFile.exists();
 
@@ -258,26 +258,26 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
       }
 
       final imageBytes = await imageFile.readAsBytes();
-      print('[ScanScreen] ✅ Image loaded: ${imageBytes.length} bytes');
+      debugPrint('[ScanScreen] ✅ Image loaded: ${imageBytes.length} bytes');
 
-      print('[ScanScreen] 🖼️ STEP 2: Decoding image...');
+      debugPrint('[ScanScreen] 🖼️ STEP 2: Decoding image...');
       final decodedImage = img.decodeImage(imageBytes);
       if (decodedImage == null) {
         throw Exception('Failed to decode image');
       }
-      print('[ScanScreen] ✅ Image decoded: ${decodedImage.width}x${decodedImage.height}');
+      debugPrint('[ScanScreen] ✅ Image decoded: ${decodedImage.width}x${decodedImage.height}');
 
-      print('[ScanScreen] 🔄 STEP 3: Preprocessing for TFLite...');
+      debugPrint('[ScanScreen] 🔄 STEP 3: Preprocessing for TFLite...');
       final input = _preprocessImage(decodedImage);
 
-      print('[ScanScreen] 🤖 STEP 4: Running TFLite inference...');
+      debugPrint('[ScanScreen] 🤖 STEP 4: Running TFLite inference...');
       final output = List.filled(38, 0.0).reshape([1, 38]);
 
       _interpreter!.run(input.reshape([1, 3, 256, 256]), output);
 
-      print('[ScanScreen] 📊 STEP 5: Processing prediction result...');
+      debugPrint('[ScanScreen] 📊 STEP 5: Processing prediction result...');
       final probabilities = output[0] as List<double>;
-      print('[ScanScreen] 📋 Output shape: ${probabilities.length} probabilities');
+      debugPrint('[ScanScreen] 📋 Output shape: ${probabilities.length} probabilities');
 
       // Find max probability
       double maxProb = 0.0;
@@ -291,17 +291,17 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
       }
 
       final confidence = (maxProb * 100).clamp(0.0, 100.0);
-      print('[ScanScreen] 🎯 Prediction: index=$maxIndex, confidence=${confidence.toStringAsFixed(2)}%');
+      debugPrint('[ScanScreen] 🎯 Prediction: index=$maxIndex, confidence=${confidence.toStringAsFixed(2)}%');
 
       // Show top 5 predictions for debugging
-      print('[ScanScreen] 🏆 Top 5 predictions:');
+      debugPrint('[ScanScreen] 🏆 Top 5 predictions:');
       final sortedIndices = List.generate(probabilities.length, (i) => i)..sort((a, b) => probabilities[b].compareTo(probabilities[a]));
 
       for (int i = 0; i < 5 && i < sortedIndices.length; i++) {
         final idx = sortedIndices[i];
         final prob = probabilities[idx] * 100;
         final label = idx < _labels.length ? _labels[idx] : 'Unknown';
-        print('[ScanScreen]   ${i + 1}. $label: ${prob.toStringAsFixed(2)}%');
+        debugPrint('[ScanScreen]   ${i + 1}. $label: ${prob.toStringAsFixed(2)}%');
       }
 
       if (maxIndex < 0 || maxIndex >= _labels.length) {
@@ -315,9 +315,9 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
       List<String> advice = [];
       if (_adviceData.containsKey(rawLabel)) {
         advice = _adviceData[rawLabel]!;
-        print('[ScanScreen] 💡 Found ${advice.length} treatment recommendations');
+        debugPrint('[ScanScreen] 💡 Found ${advice.length} treatment recommendations');
       } else {
-        print('[ScanScreen] ⚠️ No advice found for: $rawLabel');
+        debugPrint('[ScanScreen] ⚠️ No advice found for: $rawLabel');
       }
 
       setState(() {
@@ -328,8 +328,8 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
         _hasScanned = true;
       });
 
-      print('[ScanScreen] ✅ SCAN COMPLETE!');
-      print('[ScanScreen] 🏷️ Result: $readableLabel (${confidence.toStringAsFixed(2)}%)');
+      debugPrint('[ScanScreen] ✅ SCAN COMPLETE!');
+      debugPrint('[ScanScreen] 🏷️ Result: $readableLabel (${confidence.toStringAsFixed(2)}%)');
 
       if (mounted) {
         AppWidgets.showSnackBar(
@@ -339,8 +339,8 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
         );
       }
     } catch (e, stackTrace) {
-      print('[ScanScreen] ❌ ERROR: $e');
-      print('[ScanScreen] 📋 Stack trace: $stackTrace');
+      debugPrint('[ScanScreen] ❌ ERROR: $e');
+      debugPrint('[ScanScreen] 📋 Stack trace: $stackTrace');
 
       setState(() {
         _isProcessing = false;
@@ -358,8 +358,8 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    print('[ScanScreen] 🎨 BUILDING UI');
-    print('[ScanScreen] 📊 Build state: _modelLoaded=$_modelLoaded, _isProcessing=$_isProcessing, _hasScanned=$_hasScanned');
+    debugPrint('[ScanScreen] 🎨 BUILDING UI');
+    debugPrint('[ScanScreen] 📊 Build state: _modelLoaded=$_modelLoaded, _isProcessing=$_isProcessing, _hasScanned=$_hasScanned');
 
     final imageFile = File(widget.imagePath);
     final size = MediaQuery.of(context).size;

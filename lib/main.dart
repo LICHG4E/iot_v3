@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:iot_v3/firebase_options.dart';
+import 'package:iot_v3/pages/auth_pages/controllers/auth_controller.dart';
 import 'package:iot_v3/pages/providers/settings_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -19,8 +20,10 @@ import 'package:iot_v3/pages/drawer_pages/profile_page.dart';
 import 'package:iot_v3/pages/drawer_pages/setting_page.dart';
 import 'package:iot_v3/pages/home_page.dart';
 import 'package:iot_v3/pages/auth_pages/login_page.dart';
+import 'package:iot_v3/pages/auth_pages/verify_email_page.dart';
 import 'package:iot_v3/pages/scan_screen.dart';
 import 'package:iot_v3/pages/providers/user_provider.dart';
+import 'package:iot_v3/services/auth_service.dart';
 import 'constants/routes.dart';
 import 'main_page.dart';
 
@@ -51,6 +54,8 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
+        Provider<AuthService>(create: (_) => AuthService()),
+        ChangeNotifierProvider(create: (context) => AuthController(context.read<AuthService>())),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
@@ -99,6 +104,8 @@ class MyApp extends StatelessWidget {
             );
           case registerPage:
             return MaterialPageRoute(builder: (_) => const RegisterPage());
+          case verifyEmailPage:
+            return MaterialPageRoute(builder: (_) => const VerifyEmailPage());
           case deviceDataPage:
             return MaterialPageRoute(
               builder: (_) => DeviceDataPage(

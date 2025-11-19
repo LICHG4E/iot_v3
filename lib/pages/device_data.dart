@@ -32,7 +32,7 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
     super.initState();
     fetchDeviceData();
     _timer = Timer.periodic(Duration(minutes: Provider.of<SettingsProvider>(context, listen: false).getChartUpdateInterval, seconds: 1), (timer) {
-      print('Fetching data...');
+      debugPrint('Fetching data...');
       fetchDeviceData();
     });
   }
@@ -46,11 +46,11 @@ class _DeviceDataPageState extends State<DeviceDataPage> {
   Future<void> fetchDeviceData() async {
     try {
       chartPoints = Provider.of<SettingsProvider>(context, listen: false).getChartPoints;
-      print("Chart Points: $chartPoints");
+      debugPrint("Chart Points: $chartPoints");
       final querySnapshot =
           await FirebaseFirestore.instance.collection('beaglebones').doc(widget.deviceId).collection('data').orderBy('timestamp', descending: true).limit(chartPoints).get();
       setState(() {
-        print("Data fetched successfully");
+        debugPrint("Data fetched successfully");
         deviceData = querySnapshot.docs.map((doc) => doc.data()).toList();
         latestData = deviceData.isNotEmpty ? deviceData.first : null;
         isLoading = false;

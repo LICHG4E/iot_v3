@@ -11,10 +11,10 @@ class TestFirestore extends StatelessWidget {
       final subcollectionSnapshot = await collectionRef.doc(deviceId).collection('data').get();
 
       final exists = subcollectionSnapshot.docs.isNotEmpty;
-      print("Method 1 - Subcollection exists for $deviceId: $exists");
+      debugPrint("Method 1 - Subcollection exists for $deviceId: $exists");
       return exists;
     } catch (e) {
-      print("Error in Method 1: $e");
+      debugPrint("Error in Method 1: $e");
       return false;
     }
   }
@@ -27,18 +27,17 @@ class TestFirestore extends StatelessWidget {
 
       // If the parent document exists, check for the subcollection
       if (parentDocExists) {
-        final subcollectionSnapshot =
-            await FirebaseFirestore.instance.collection('beaglebones').doc(deviceId).collection('data').get();
+        final subcollectionSnapshot = await FirebaseFirestore.instance.collection('beaglebones').doc(deviceId).collection('data').get();
 
         final exists = subcollectionSnapshot.docs.isNotEmpty;
-        print("Method 2 - Subcollection exists for $deviceId: $exists");
+        debugPrint("Method 2 - Subcollection exists for $deviceId: $exists");
         return exists;
       }
 
-      print("Method 2 - Parent document for $deviceId does NOT exist");
+      debugPrint("Method 2 - Parent document for $deviceId does NOT exist");
       return false;
     } catch (e) {
-      print("Error in Method 2: $e");
+      debugPrint("Error in Method 2: $e");
       return false;
     }
   }
@@ -63,7 +62,7 @@ class TestFirestore extends StatelessWidget {
                 ? 'Both methods returned the same result: ${existsMethod1 ? "Subcollection exists" : "Subcollection does NOT exist"}'
                 : 'Results differ! Method 1: ${existsMethod1 ? "Exists" : "Does NOT exist"}, Method 2: ${existsMethod2 ? "Exists" : "Does NOT exist"}';
 
-            print(comparisonResult);
+            debugPrint(comparisonResult);
 
             // Show comparison results in a dialog
             showDialog(
