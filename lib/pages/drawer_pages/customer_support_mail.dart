@@ -306,7 +306,7 @@ class _CustomerSupportMailState extends State<CustomerSupportMail> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.send, color: Theme.of(context).colorScheme.onPrimary),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Text(
                                     'Send Email',
                                     style: TextStyle(

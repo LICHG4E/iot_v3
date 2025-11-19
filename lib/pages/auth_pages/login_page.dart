@@ -38,7 +38,21 @@ class _LoginPageState extends State<LoginPage> {
         message: controller.errorMessage!,
         type: SnackBarType.error,
       );
+      return;
     }
+
+    if (controller.status == AuthStatus.awaitingEmailVerification) {
+      AppWidgets.showSnackBar(
+        context: context,
+        message: 'Please verify your email from the link we just sent.',
+        type: SnackBarType.info,
+      );
+    }
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      mainPage,
+      (route) => false,
+    );
   }
 
   @override
@@ -54,6 +68,7 @@ class _LoginPageState extends State<LoginPage> {
           child: RiveAnimation.asset(
             theme.brightness == Brightness.light ? AppConstants.plantLogoLightPath : AppConstants.plantLogoDarkPath,
             fit: BoxFit.contain,
+            speedMultiplier: 0.8,
           ),
         ),
       ),

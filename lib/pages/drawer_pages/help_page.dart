@@ -137,7 +137,7 @@ class _HelpPageState extends State<HelpPage> {
               child: Column(
                 children: [
                   Icon(Icons.help_outline, size: 60, color: Theme.of(context).colorScheme.onPrimary),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
                     'How can we help you?',
                     style: TextStyle(
@@ -146,7 +146,7 @@ class _HelpPageState extends State<HelpPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Find answers to common questions below',
                     style: TextStyle(

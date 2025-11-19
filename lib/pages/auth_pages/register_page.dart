@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iot_v3/constants/app_constants.dart';
+import 'package:iot_v3/constants/routes.dart';
 import 'package:iot_v3/pages/auth_pages/controllers/auth_controller.dart';
 import 'package:iot_v3/pages/auth_pages/widgets/auth_page_template.dart';
 import 'package:iot_v3/widgets/app_widgets.dart';
@@ -45,6 +46,10 @@ class _RegisterPageState extends State<RegisterPage> {
         context: context,
         message: 'Verification email sent. Please verify to continue.',
         type: SnackBarType.info,
+      );
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        mainPage,
+        (route) => false,
       );
     }
   }
